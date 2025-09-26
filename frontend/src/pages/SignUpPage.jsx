@@ -4,6 +4,7 @@ import { Link } from "react-router";
 import { useMutation, useQueryClient} from "@tanstack/react-query";
 
 import { signup } from "../lib/api.js";
+import useSignUp from "../hooks/useSignUp.js";
 
 const SignUpPage = () => {
   const [signupData, setSignupData] = useState({
@@ -12,14 +13,14 @@ const SignUpPage = () => {
     password: "",
   });
 
-  const queryClient = useQueryClient();
-
-    const { mutate: signupMutation, isPending, error } = useMutation({
-        mutationFn: signup,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["authUser"] });
-        }
-    });
+//   const queryClient = useQueryClient();
+    // const { mutate: signupMutation, isPending, error } = useMutation({
+    //     mutationFn: signup,
+    //     onSuccess: () => {
+    //         queryClient.invalidateQueries({ queryKey: ["authUser"] });
+    //     }
+    // });
+    const { isPending, error, signupMutation } = useSignUp();
 
     const images = ["/i_0.png", "/i_1.png", "/i_2.png"];
     const texts = [
@@ -51,8 +52,8 @@ const SignUpPage = () => {
             <div className="w-full lg:w-1/2 p-4 sm:p-8 flex-col">
                 {/* LOGO */}
                 <div className="mb-4 flex items-center justify-start gap-2">
-                    <BriefcaseMedicalIcon className="size-9 text-primary" style={{ color: "#0071BC" }}/>
-                    <span className="text-3xl font-bold font-mono tracking-wider" style={{ color: "#0071BC" }}>
+                    <BriefcaseMedicalIcon className="size-9 text-accent" />
+                    <span className="text-accent text-3xl font-bold font-mono tracking-wider"   >
                         MedConnect
                     </span>
                 </div>
