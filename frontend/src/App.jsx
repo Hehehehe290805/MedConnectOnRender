@@ -10,15 +10,14 @@ import OnboardingPage from "./pages/OnboardingPage.jsx";
 
 import { Toaster } from "react-hot-toast";
 
-// import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { axiosInstance } from "./lib/axios.js";
 import PageLoader from "./components/PageLoader.jsx";
-import { getAuthUser } from "./lib/api.js";
 import useAuthUser from "./hooks/useAuthUser.js";
+import Layout from "./components/Layout.jsx";
+import { useThemeStore } from "./store/useThemeStore.js";
 
 const App = () => {
   const { isLoading, authUser } = useAuthUser();
+  const { theme } = useThemeStore();
 
   const isAuthenticated = Boolean(authUser)
   const isOnboarded = authUser?.isOnboarded;
@@ -26,15 +25,27 @@ const App = () => {
 
   if (isLoading) return <PageLoader />;
 
-  return <div className="h-screen" data-theme="light">
+  return <div className="h-screen" data-theme={theme}>
       <Routes>
         <Route path="/" element={isAuthenticated && isOnboarded ? (
-          <HomePage />
+          <Layout showSidebar={true}>
+            <HomePage />
+          </Layout>
         ) : (
           <Navigate to={isAuthenticated ? "/onboarding" : "/login"} />
         )} />
-        <Route path="/signup" element={!isAuthenticated ? <SignUpPage /> : <Navigate to= "/" />} />
-        <Route path="/login" element={!isAuthenticated ? <LoginPage /> : <Navigate to= "/" />} />
+        <Route 
+          path="/signup" 
+          element={
+            !isAuthenticated ? <SignUpPage /> : <Navigate to={isOnboarded ? "/" : "/onboarding"} />
+          } 
+        />
+        <Route 
+          path="/login" 
+          element={
+            !isAuthenticated ? <LoginPage /> : <Navigate to={isOnboarded ? "/" : "/onboarding"} />
+         } 
+        />
         <Route 
         path="/notifications" 
         element={isAuthenticated ? <NotificationsPage /> : <Navigate to= "/login" />} 

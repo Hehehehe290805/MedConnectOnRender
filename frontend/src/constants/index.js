@@ -179,6 +179,11 @@ export const LANGUAGES = [
   "Dutch",
 ];
 
+export const SEX = [
+  "Male",
+  "Female",
+];
+
 export const LANGUAGE_TO_FLAG = {
   english: "gb",
   spanish: "es",
