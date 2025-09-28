@@ -115,25 +115,49 @@ export async function acceptFriendRequest(req, res) {
   }
 }
 
+// export async function getFriendRequests(req, res) {
+//   try {
+//     const incomingRequests = await FriendRequest.find({
+//       recipient: req.user.id,
+//       status: "pending",
+//     }).populate("sender", "fullName profilePic nativeLanguage learningLanguage");
+//     res.status(200).json(incomingRequests);
+
+//     const acceptedReqs = await FriendRequest.find({
+//       recipient: req.user.id,
+//       status: "accepted",
+//     }).populate("recipient", "fullName profilePic");
+
+//     res.status(200).json(incomingRequests, acceptedReqs);
+//   } catch (error) {
+//     console.error("Error in getFriendRequests controller", error.message);
+//     res.status(500).json({ message: "Internal Server Error" });
+//   }
+// }
+
 export async function getFriendRequests(req, res) {
   try {
-    const incomingRequests = await FriendRequest.find({
+    const incomingReqs = await FriendRequest.find({
       recipient: req.user.id,
       status: "pending",
     }).populate("sender", "fullName profilePic nativeLanguage learningLanguage");
-    res.status(200).json(incomingRequests);
 
     const acceptedReqs = await FriendRequest.find({
       recipient: req.user.id,
       status: "accepted",
     }).populate("recipient", "fullName profilePic");
 
-    res.status(200).json(incomingRequests, acceptedReqs);
+    // ✅ send everything in ONE response object
+    return res.status(200).json({
+      incomingReqs,
+      acceptedReqs,
+    });
   } catch (error) {
     console.error("Error in getFriendRequests controller", error.message);
-    res.status(500).json({ message: "Internal Server Error" });
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 }
+ 
 
 export async function getOutgoingFriendRequests(req, res) {
   try {
