@@ -1,9 +1,14 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
 const userSchema = new mongoose.Schema(
   {
-    fullName: {
+    firstName: {
+      type: String,
+      required: true,
+    },
+    lastName: {
       type: String,
       required: true,
     },
@@ -17,6 +22,9 @@ const userSchema = new mongoose.Schema(
       required: true,
       minlength: 6,
     },
+    birthDate: {
+      type: Date,
+    },
     bio: {
       type: String,
       default: "",
@@ -25,21 +33,21 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
-    nativeLanguage: {
-      type: String,
-      default: "",
-    },
-    learningLanguage: {
-      type: String,
-      default: "",
-    },
+    languages: [
+      {
+        type: String,
+        enum: ["English", "Tagalog"],
+        required: true,
+      },
+    ],
     location: {
       type: String,
       default: "",
     },
-    isOnboarded: {
-      type: Boolean,
-      default: false,
+    status: {
+      type: String,
+      enum: ["notOnBoarded", "onBoarded", "pending", "onBoardedProfessional", "onBoardedAdmin"],
+      default: "notOnBoarded",
     },
     friends: [
       {
@@ -47,6 +55,22 @@ const userSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
+    pro: {
+      type: Boolean,
+      default: false,
+    },
+    licenseNumber: {
+      type: String,
+    },
+    profession: {
+      type: String,
+    },
+    facilityName: {
+      type: String,
+    },
+    adminCode: {
+      type: String,
+    },
   },
   { timestamps: true }
 );
@@ -69,5 +93,39 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
 };
 
 const User = mongoose.model("User", userSchema);
+
+const ENCRYPTION_KEY = process.env.LICENSE_SECRET_KEY; // 32 chars for AES-256
+const IV_LENGTH = 16;
+
+function encrypt(text) {
+  const iv = crypto.randomBytes(IV_LENGTH);
+  const cipher = crypto.createCipheriv("aes-256-cbc", Buffer.from(ENCRYPTION_KEY), iv);
+  let encrypted = cipher.update(text);
+  encrypted = Buffer.concat([encrypted, cipher.final()]);
+  return iv.toString("hex") + ":" + encrypted.toString("hex");
+}
+
+function decrypt(text) {
+  const [ivHex, encryptedText] = text.split(":");
+  const iv = Buffer.from(ivHex, "hex");
+  const encrypted = Buffer.from(encryptedText, "hex");
+  const decipher = crypto.createDecipheriv("aes-256-cbc", Buffer.from(ENCRYPTION_KEY), iv);
+  let decrypted = decipher.update(encrypted);
+  decrypted = Buffer.concat([decrypted, decipher.final()]);
+  return decrypted.toString();
+}
+
+// hook to encrypt before save
+userSchema.pre("save", function (next) {
+  if (this.isModified("licenseNumber") && this.licenseNumber) {
+    this.licenseNumber = encrypt(this.licenseNumber);
+  }
+  next();
+});
+
+// method to decrypt when needed
+userSchema.methods.getLicenseNumber = function () {
+  return this.licenseNumber ? decrypt(this.licenseNumber) : null;
+};
 
 export default User;
