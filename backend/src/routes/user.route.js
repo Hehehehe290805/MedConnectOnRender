@@ -6,7 +6,8 @@ import {
     sendFriendRequest, 
     acceptFriendRequest,
     getFriendRequests,
-    getOutgoingFriendRequests
+    getOutgoingFriendRequests,
+    getUsers, getDoctors, getPharmacies, getInstitutes
 } from "../controllers/user.controller.js";
 
 const router = express.Router();
