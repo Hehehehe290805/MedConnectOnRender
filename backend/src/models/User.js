@@ -37,7 +37,7 @@ const userSchema = new mongoose.Schema(
       {
         type: String,
         enum: ["English", "Tagalog"],
-        required: true,
+        // required: true,
       },
     ],
     location: {
@@ -46,7 +46,7 @@ const userSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["notOnBoarded", "onBoarded", "pending", "onBoardedProfessional", "onBoardedAdmin"],
+      enum: ["notOnBoarded", "onBoarded", "pending"],
       default: "notOnBoarded",
     },
     friends: [
@@ -59,10 +59,15 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    licenseNumber: {
+    role: {
       type: String,
+      enum: ["user", "doctor", "institute", "pharmacist", "admin"],
+      default: "user",
     },
     profession: {
+      type: String,
+    },
+    licenseNumber: {
       type: String,
     },
     facilityName: {
@@ -91,8 +96,6 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
   const isPasswordCorrect = await bcrypt.compare(enteredPassword, this.password);
   return isPasswordCorrect;
 };
-
-const User = mongoose.model("User", userSchema);
 
 const ENCRYPTION_KEY = process.env.LICENSE_SECRET_KEY; // 32 chars for AES-256
 const IV_LENGTH = 16;
@@ -127,5 +130,7 @@ userSchema.pre("save", function (next) {
 userSchema.methods.getLicenseNumber = function () {
   return this.licenseNumber ? decrypt(this.licenseNumber) : null;
 };
+
+const User = mongoose.model("User", userSchema);
 
 export default User;

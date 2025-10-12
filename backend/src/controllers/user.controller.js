@@ -1,5 +1,5 @@
 import User from "../models/User.js";
-import FriendRequest from "../models/FirendRequest.js";
+import FriendRequest from "../models/FriendRequest.js";
 
 export async function getRecommendedUsers(req, res) {
   try {
@@ -168,6 +168,95 @@ export async function getOutgoingFriendRequests(req, res) {
     res.status(200).json(outgoingRequests);
   }catch (error) {
     console.error("Error in getOutgoingFriendRequests controller", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+export async function getUsers(req, res) {
+  try {
+    const users = await User.find({
+      status: "onBoarded",
+      role: "user",
+    }).select("firstName lastName profession birthDate");
+
+    const formatted = users.map(user => ({
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      birthDate: user.birthDate ? user.birthDate.toISOString().split("T")[0] : null,
+    }));
+
+    res.status(200).json({ success: true, users: formatted });
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+export async function getDoctors(req, res) {
+  try {
+    const doctors = await User.find({
+      status: "onBoarded",
+      role: "doctor",
+    }).select("firstName lastName profession birthDate");
+
+    const formatted = doctors.map(user => ({
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      profession: user.profession,
+      birthDate: user.birthDate ? user.birthDate.toISOString().split("T")[0] : null,
+    }));
+
+    res.status(200).json({ success: true, users: formatted });
+  } catch (error) {
+    console.error("Error fetching doctors:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+export async function getPharmacies(req, res) {
+  try {
+    const pharmacies = await User.find({
+      status: "onBoarded",
+      role: "pharmacist"
+    }).select("firstName lastName profession birthDate facilityName");
+
+    const formatted = pharmacies.map(user => ({
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      profession: user.profession,
+      birthDate: user.birthDate ? user.birthDate.toISOString().split("T")[0] : null,
+      facilityName: user.facilityName,
+    }));
+
+    res.status(200).json({ success: true, users: formatted });
+  } catch (error) {
+    console.error("Error fetching pharmacies:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+export async function getInstitutes(req, res) {
+  try {
+    const institutes = await User.find({
+      status: "onBoarded",
+      role: "institute",
+    }).select("firstName lastName profession birthDate facilityName");
+
+    const formatted = institutes.map(user => ({
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      profession: user.profession,
+      birthDate: user.birthDate ? user.birthDate.toISOString().split("T")[0] : null,
+      facilityName: user.facilityName,
+    }));
+
+    res.status(200).json({ success: true, users: formatted });
+  } catch (error) {
+    console.error("Error fetching institutes:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 }
