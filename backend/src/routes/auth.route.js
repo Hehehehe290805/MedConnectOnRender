@@ -1,8 +1,6 @@
 import express from "express";
 import { 
-  signup, login, logout, 
-  getPendingUsers, approveRole, getAdmins,
-  getUsers, getDoctors, getInstitutes, getPharmacies
+  signup, login, logout
   } from "../controllers/auth.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 
