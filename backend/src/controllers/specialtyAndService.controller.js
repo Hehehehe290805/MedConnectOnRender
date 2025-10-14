@@ -34,6 +34,77 @@ export async function getServices(req, res) {
     return fetchHelper(req, res, "service");
 }
 
+async function fetchServicesHelper(targetId, type) {
+    try {
+        let Model;
+        let filter = { status: "verified" };
+        let populateFields = [];
+        let format = (c) => c;
+
+        switch (type) {
+            case "doctor":
+                Model = Doctor_Specialty;
+                filter.doctorId = targetId;
+                populateFields = [
+                    { path: "specialtyId", select: "name" },
+                    { path: "subspecialtyId", select: "name" }
+                ];
+                format = (c) => ({
+                    claimId: c._id,
+                    type: c.subspecialtyId ? "subspecialty" : "specialty",
+                    name: c.subspecialtyId ? c.subspecialtyId.name : c.specialtyId.name
+                });
+                break;
+
+            case "institute":
+                Model = Institute_Service;
+                filter.instituteId = targetId;
+                populateFields = [
+                    { path: "serviceId", select: "name" }
+                ];
+                format = (c) => ({
+                    claimId: c._id,
+                    type: "service",
+                    name: c.serviceId?.name
+                });
+                break;
+
+            default:
+                throw new Error("Invalid type");
+        }
+
+        let query = Model.find(filter);
+        populateFields.forEach(f => query.populate(f));
+        const results = await query.sort({ createdAt: -1 });
+            
+        return { success: true, items: results.map(format) };
+    } catch (error) {
+        console.error("Error fetching target services:", error);
+        throw error;
+    }
+}
+export async function getUserServices(req, res) {
+    try {
+        const { targetId, targetType } = req.body;
+
+        if (!targetId || !targetType) {
+            return res.status(400).json({
+                success: false,
+                message: "targetId and targetType are required"
+            });
+        }
+
+        const result = await fetchServicesHelper(targetId, targetType);
+        res.status(200).json(result);
+    } catch (error) {
+        console.error("Error in getUserServices:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal Server Error"
+        });
+    }
+}
+
 // Suggest Specialties
 async function suggestHelper(req, res, type) {
     try {
@@ -117,7 +188,7 @@ async function claimHelper(req, res, type) {
                 TargetModel = Service;
                 LinkModel = Institute_Service;
                 linkData.instituteId = userId;
-                linkData.serviceID = targetId;
+                linkData.serviceId = targetId;
                 break;
 
             default:
@@ -133,7 +204,7 @@ async function claimHelper(req, res, type) {
         // 🔸 Prevent duplicate claim
         const existingLink = await LinkModel.findOne(
             type === "service"
-                ? { instituteId: userId, serviceID: targetId }
+                ? { instituteId: userId, serviceId: targetId }
                 : type === "specialty"
                     ? { doctorId: userId, specialtyId: targetId }
                     : { doctorId: userId, subspecialtyId: targetId }

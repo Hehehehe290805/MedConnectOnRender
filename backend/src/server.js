@@ -9,6 +9,7 @@ import adminRoutes from "./routes/admin.route.js";
 import authRoutes from "./routes/auth.route.js";
 import chatRoutes from "./routes/chat.route.js";
 import onboardingRoutes from "./routes/onboarding.route.js";
+import pricingRoutes from "./routes/pricing.route.js";
 import specialtyAndServiceRoutes from "./routes/specialtyAndService.route.js";
 import userRoutes from "./routes/user.route.js";
 
@@ -34,6 +35,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/onboarding", onboardingRoutes);
+app.use("/api/pricing", pricingRoutes);
 app.use("/api/specialties-and-services", specialtyAndServiceRoutes);
 app.use("/api/users", userRoutes);
 

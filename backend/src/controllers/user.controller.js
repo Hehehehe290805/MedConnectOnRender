@@ -19,7 +19,6 @@ export async function getRecommendedUsers(req, res) {
     res.status(500).json({ message: "Internal Server Error" });
   }
 }
-
 export async function getMyFriends(req, res) {
   try {
     const user = await User.findById(req.user.id)
@@ -32,7 +31,6 @@ export async function getMyFriends(req, res) {
     res.status(500).json({ message: "Internal Server Error" });
   }
 }
-
 export async function sendFriendRequest(req, res) {
   try {
     const myId = req.user.id;
@@ -79,7 +77,6 @@ export async function sendFriendRequest(req, res) {
     res.status(500).json({ message: "Internal Server Error" });
   }
 }
-
 export async function acceptFriendRequest(req, res) {
   try {
     const {id:requestId} = req.params
@@ -114,7 +111,6 @@ export async function acceptFriendRequest(req, res) {
     res.status(500).json({ message: "Internal Server Error" });
   }
 }
-
 // export async function getFriendRequests(req, res) {
 //   try {
 //     const incomingRequests = await FriendRequest.find({
@@ -134,7 +130,6 @@ export async function acceptFriendRequest(req, res) {
 //     res.status(500).json({ message: "Internal Server Error" });
 //   }
 // }
-
 export async function getFriendRequests(req, res) {
   try {
     const incomingReqs = await FriendRequest.find({
@@ -157,8 +152,6 @@ export async function getFriendRequests(req, res) {
     return res.status(500).json({ message: "Internal Server Error" });
   }
 }
- 
-
 export async function getOutgoingFriendRequests(req, res) {
   try {
     const outgoingRequests = await FriendRequest.find({
@@ -172,6 +165,7 @@ export async function getOutgoingFriendRequests(req, res) {
   }
 }
 
+// Get users by role
 export async function getUsers(req, res) {
   try {
     const users = await User.find({
@@ -192,7 +186,6 @@ export async function getUsers(req, res) {
     res.status(500).json({ message: "Internal Server Error" });
   }
 }
-
 export async function getDoctors(req, res) {
   try {
     const doctors = await User.find({
@@ -214,7 +207,6 @@ export async function getDoctors(req, res) {
     res.status(500).json({ message: "Internal Server Error" });
   }
 }
-
 export async function getPharmacies(req, res) {
   try {
     const pharmacies = await User.find({
@@ -237,7 +229,6 @@ export async function getPharmacies(req, res) {
     res.status(500).json({ message: "Internal Server Error" });
   }
 }
-
 export async function getInstitutes(req, res) {
   try {
     const institutes = await User.find({
