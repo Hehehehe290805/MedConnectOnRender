@@ -37,7 +37,7 @@ const userSchema = new mongoose.Schema(
       {
         type: String,
         enum: ["English", "Tagalog"],
-        // required: true,
+        required: true,
       },
     ],
     location: {
@@ -75,6 +75,10 @@ const userSchema = new mongoose.Schema(
     },
     adminCode: {
       type: String,
+    },
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
     },
   },
   { timestamps: true }

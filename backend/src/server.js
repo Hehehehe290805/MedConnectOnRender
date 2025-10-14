@@ -4,9 +4,13 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import path from "path";
 
+import adminRoutes from "./routes/admin.route.js";
+//import appointmentRoutes from "./routes/appointment.route.js";
 import authRoutes from "./routes/auth.route.js";
-import userRoutes from "./routes/user.route.js";
 import chatRoutes from "./routes/chat.route.js";
+import onboardingRoutes from "./routes/onboarding.route.js";
+import specialtyAndServiceRoutes from "./routes/specialtyAndService.route.js";
+import userRoutes from "./routes/user.route.js";
 
 import { connectDB } from "./lib/db.js";
 
@@ -25,9 +29,13 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
+app.use("/api/admin", adminRoutes);
+//app.use("/api/appointments", appointmentRoutes);
 app.use("/api/auth", authRoutes);
-app.use("/api/users", userRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/onboarding", onboardingRoutes);
+app.use("/api/specialties-and-services", specialtyAndServiceRoutes);
+app.use("/api/users", userRoutes);
 
 if(process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../frontend/dist")));

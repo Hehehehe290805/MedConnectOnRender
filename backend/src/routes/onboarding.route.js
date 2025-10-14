@@ -1,7 +1,7 @@
 import express from "express";
 import {
     onboard, onboardAsDoctor, onboardAsInstitute, onboardAsPharmacist, onboardAsAdmin, changeRole
-    } from "../controllers/auth.controller.js";
+    } from "../controllers/onboarding.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
