@@ -79,7 +79,7 @@ export async function approveRole(req, res) {
     // Update the status to onBoarded
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      { status: "onBoarded", approvedBy: "68ebc9917b7fbb5c35cb6cbe" }, // Temporary admin ID, make it dynamic later
+      { status: "onBoarded", approvedBy: req.user._id },
       { new: true }
     ).select("-password");
 
@@ -158,7 +158,7 @@ async function approveHelper(req, res, type) {
 
     // Add admin approval information with temporary ID
     item.status = "verified";
-    item.approvedBy = "68ebc9917b7fbb5c35cb6cbe"; // Temporary admin ID
+    item.approvedBy = req.user._id; 
     await item.save();
 
     return res.status(200).json({
@@ -182,7 +182,7 @@ export async function getPendingClaims(req, res) {
       specialtyId: { $exists: true }
     })
       .populate("doctorId", "firstName lastName email")
-      .populate("specialtyId", "name");
+      .populate("specialtyId", "name"); // NO durationMinutes for specialty
 
     // Subspecialty claims (has subspecialtyId)
     const subspecialtyClaims = await Doctor_Specialty.find({
@@ -190,12 +190,12 @@ export async function getPendingClaims(req, res) {
       subspecialtyId: { $exists: true },
     })
       .populate("doctorId", "firstName lastName email")
-      .populate("subspecialtyId", "name");
+      .populate("subspecialtyId", "name"); // NO durationMinutes for subspecialty
 
-    // Service claims (institutes)
+    // Service claims (institutes) - ONLY service has durationMinutes
     const serviceClaims = await Institute_Service.find({ status: "pending" })
       .populate("instituteId", "facilityName email")
-      .populate("serviceId", "name");
+      .populate("serviceId", "name durationMinutes"); // durationMinutes ONLY here
 
     res.status(200).json({
       success: true,
@@ -221,6 +221,7 @@ function getClaimModel(type) {
       return null;
   }
 }
+
 export async function approveClaim(req, res) {
   try {
     const { claimId, type } = req.body;

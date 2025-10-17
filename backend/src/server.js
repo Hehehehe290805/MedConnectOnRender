@@ -5,11 +5,12 @@ import cors from "cors";
 import path from "path";
 
 import adminRoutes from "./routes/admin.route.js";
-//import appointmentRoutes from "./routes/appointment.route.js";
 import authRoutes from "./routes/auth.route.js";
 import chatRoutes from "./routes/chat.route.js";
+import doctorScheduleRoutes from "./routes/doctorSchedule.route.js";
 import onboardingRoutes from "./routes/onboarding.route.js";
 import pricingRoutes from "./routes/pricing.route.js";
+import searchRoutes from "./routes/search.route.js";
 import specialtyAndServiceRoutes from "./routes/specialtyAndService.route.js";
 import userRoutes from "./routes/user.route.js";
 
@@ -31,11 +32,12 @@ app.use(express.json());
 app.use(cookieParser());
 
 app.use("/api/admin", adminRoutes);
-//app.use("/api/appointments", appointmentRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/doctor-schedule", doctorScheduleRoutes);
 app.use("/api/onboarding", onboardingRoutes);
 app.use("/api/pricing", pricingRoutes);
+app.use("/api/search", searchRoutes);
 app.use("/api/specialties-and-services", specialtyAndServiceRoutes);
 app.use("/api/users", userRoutes);
 

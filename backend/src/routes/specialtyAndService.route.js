@@ -1,6 +1,6 @@
 import express from "express";
 import {
-    getSpecialties, getSubspecialtiesBySpecialty, getServices, getUserServices,
+    getSpecialties, getSubspecialtiesBySpecialty, getServices, getInstituteServices,
     suggestSpecialty, suggestSubspecialty, suggestService,
     claimSpecialty, claimSubspecialty, claimService
 } from "../controllers/specialtyAndService.controller.js";
@@ -11,7 +11,7 @@ const router = express.Router();
 router.get("/specialties", protectRoute, getSpecialties);
 router.get("/subspecialties/:specialtyId", protectRoute, getSubspecialtiesBySpecialty);
 router.get("/services", protectRoute, getServices);
-router.post("/user-services", protectRoute, getUserServices);
+router.post("/institute-services", protectRoute, getInstituteServices);
 
 router.post("/suggest-specialty", protectRoute, suggestSpecialty);
 router.post("/suggest-subspecialty", protectRoute, suggestSubspecialty);

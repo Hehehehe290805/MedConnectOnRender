@@ -65,7 +65,8 @@ async function fetchServicesHelper(targetId, type) {
                 format = (c) => ({
                     claimId: c._id,
                     type: "service",
-                    name: c.serviceId?.name
+                    name: c.serviceId?.name,
+                    durationMinutes: c.durationMinutes
                 });
                 break;
 
@@ -83,7 +84,7 @@ async function fetchServicesHelper(targetId, type) {
         throw error;
     }
 }
-export async function getUserServices(req, res) {
+export async function getInstituteServices(req, res) {
     try {
         const { targetId, targetType } = req.body;
 
@@ -155,10 +156,10 @@ export async function suggestSubspecialty(req, res) { return suggestHelper(req, 
 export async function suggestService(req, res) { return suggestHelper(req, res, "service"); }
 
 // Claim Specialty or Subspecialty
-async function claimHelper(req, res, type) {
+async function claimHelper(req, res, type, extraFields = {}) {
     try {
-        const userId = req.user._id; // from auth middleware
-        const { targetId } = req.body; // ID of the specialty / subspecialty / service
+        const userId = req.user._id;
+        const { targetId } = req.body;
 
         if (!targetId) {
             return res.status(400).json({ message: "Target ID is required" });
@@ -166,7 +167,11 @@ async function claimHelper(req, res, type) {
 
         let LinkModel;
         let TargetModel;
-        const linkData = { status: "pending", approvedBy: null };
+        const linkData = {
+            status: "pending",
+            approvedBy: null,
+            ...extraFields // SPREAD the extra fields here
+        };
 
         // 🔸 Decide what type of claim we're making
         switch (type) {
@@ -229,11 +234,17 @@ async function claimHelper(req, res, type) {
     }
 }
 export async function claimSpecialty(req, res) {
-    return claimHelper(req, res, "specialty");
+    return claimHelper(req, res, "specialty"); // No extra fields needed
 }
 export async function claimSubspecialty(req, res) {
-    return claimHelper(req, res, "subspecialty");
+    return claimHelper(req, res, "subspecialty"); // No extra fields needed
 }
 export async function claimService(req, res) {
-    return claimHelper(req, res, "service");
+    const { durationMinutes } = req.body;
+
+    if (!durationMinutes) {
+        return res.status(400).json({ message: "durationMinutes is required for service claims" });
+    }
+
+    return claimHelper(req, res, "service", { durationMinutes }); // Pass duration as extra field
 }

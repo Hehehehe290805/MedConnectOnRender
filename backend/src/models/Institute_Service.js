@@ -11,6 +11,10 @@ const Institute_ServiceSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: "Service",
         },
+        durationMinutes: {
+            type: Number, 
+            required: true
+        },
         status: {
             type: String,
             enum: ["pending", "verified"],
