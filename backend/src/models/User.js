@@ -6,11 +6,9 @@ const userSchema = new mongoose.Schema(
   {
     firstName: {
       type: String,
-      required: true,
     },
     lastName: {
       type: String,
-      required: true,
     },
     email: {
       type: String,
@@ -80,20 +78,42 @@ const userSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
+
+    // Payment Integration Fields
+    gcash: {
+      qrData: String,         // decoded string
+      accountName: String,    // manually provided by user
+      accountNumber: String,  // manually provided by user
+      isVerified: { type: Boolean, default: false },
+    }
+
   },
   { timestamps: true }
 );
 
+// COMBINED pre-save hook to handle all modifications
 userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
-
-  try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error);
+  // Password hashing
+  if (this.isModified("password")) {
+    try {
+      const salt = await bcrypt.genSalt(10);
+      this.password = await bcrypt.hash(this.password, salt);
+    } catch (error) {
+      return next(error);
+    }
   }
+
+  // License number encryption
+  if (this.isModified("licenseNumber") && this.licenseNumber && !this.licenseNumber.includes(":")) {
+    this.licenseNumber = encrypt(this.licenseNumber);
+  }
+
+  // GCash account number encryption
+  if (this.isModified("gcash.accountNumber") && this.gcash?.accountNumber && !this.gcash.accountNumber.includes(":")) {
+    this.gcash.accountNumber = encrypt(this.gcash.accountNumber);
+  }
+
+  next();
 });
 
 userSchema.methods.matchPassword = async function (enteredPassword) {
@@ -122,17 +142,13 @@ function decrypt(text) {
   return decrypted.toString();
 }
 
-// hook to encrypt before save
-userSchema.pre("save", function (next) {
-  if (this.isModified("licenseNumber") && this.licenseNumber) {
-    this.licenseNumber = encrypt(this.licenseNumber);
-  }
-  next();
-});
-
 // method to decrypt when needed
 userSchema.methods.getLicenseNumber = function () {
   return this.licenseNumber ? decrypt(this.licenseNumber) : null;
+};
+
+userSchema.methods.getGcashAccountNumber = function () {
+  return this.gcash.accountNumber ? decrypt(this.gcash.accountNumber) : null;
 };
 
 const User = mongoose.model("User", userSchema);

@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "src/server.js",
   "scripts": {
+    "test": "cross-env NODE_ENV=production mocha \"test/**/*.js\" --timeout 10000 --exit",
     "dev": "nodemon src/server.js",
     "start": "node src/server.js"
   },
@@ -19,11 +20,18 @@
     "dayjs": "^1.11.18",
     "dotenv": "^16.5.0",
     "express": "^4.21.0",
+    "jimp": "^1.6.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.13.2",
+    "multer": "^2.0.2",
+    "qrcode-reader": "^1.0.4",
     "stream-chat": "^8.60.0"
   },
   "devDependencies": {
+    "chai": "^4.3.4",
+    "chai-http": "^4.3.0",
+    "cross-env": "^10.1.0",
+    "mocha": "^11.7.4",
     "nodemon": "^3.1.9"
   }
 }
