@@ -1,25 +1,30 @@
-import fs from "fs";
 import multer from "multer";
-import QRCode from "qrcode-reader";
+import QRCode from "qrcode";
 import { Jimp } from "jimp";
 import User from "../models/User.js";
 
-// Configure Multer — temporary local storage only
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, "uploads/gcash"); // save temporarily
+// Configure Multer with MEMORY storage (no file saving)
+const storage = multer.memoryStorage(); // This keeps file in memory only
+
+// Create multer instance with proper configuration
+export const upload = multer({
+    storage: storage,
+    limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB limit
     },
-    filename: (req, file, cb) => {
-        const uniqueName = Date.now() + "-" + file.originalname;
-        cb(null, uniqueName);
-    },
+    fileFilter: (req, file, cb) => {
+        // Check if the file is an image
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only image files are allowed!'), false);
+        }
+    }
 });
 
-export const upload = multer({ storage });
-
-// 🧠 Helper: Decode QR from uploaded image
-const decodeQR = async (filePath) => {
-    const image = await Jimp.read(filePath);
+// decode QR from memory buffer
+const decodeQR = async (buffer) => {
+    const image = await Jimp.read(buffer);
     return new Promise((resolve, reject) => {
         const qr = new QRCode();
         qr.callback = (err, value) => {
@@ -33,24 +38,23 @@ const decodeQR = async (filePath) => {
 // 📥 Upload & extract GCash QR
 export const uploadGCashQR = async (req, res) => {
     try {
-        const userId = req.user.id; // assuming you use auth middleware
-        const filePath = req.file.path;
+        const userId = req.user.id;
 
-        // 1. Decode QR from the image
-        const qrData = await decodeQR(filePath);
+        if (!req.file) {
+            return res.status(400).json({ message: "No file uploaded" });
+        }
+
+        // 1. Decode QR from the uploaded buffer
+        const qrData = await decodeQR(req.file.buffer);
         if (!qrData) {
-            fs.unlinkSync(filePath);
             return res.status(400).json({ message: "Invalid QR code." });
         }
 
-        // 2. Extract accountName and accountNumber from req.body (manual)
         const { accountName, accountNumber } = req.body;
         if (!accountName || !accountNumber) {
-            fs.unlinkSync(filePath);
             return res.status(400).json({ message: "Account name and number are required." });
         }
 
-        // 3. Update user GCash data
         const user = await User.findByIdAndUpdate(
             userId,
             {
@@ -58,14 +62,11 @@ export const uploadGCashQR = async (req, res) => {
                     "gcash.qrData": qrData,
                     "gcash.accountName": accountName,
                     "gcash.accountNumber": accountNumber,
-                    "gcash.isVerified": false, // manual or later verified
+                    "gcash.isVerified": false,
                 },
             },
             { new: true }
         );
-
-        // 4. Delete file to save storage
-        fs.unlinkSync(filePath);
 
         res.json({
             message: "GCash QR uploaded successfully.",
@@ -77,7 +78,7 @@ export const uploadGCashQR = async (req, res) => {
     }
 };
 
-// 📤 (Optional) GET user GCash info
+// 📤 GET user GCash info
 export const getGCashInfo = async (req, res) => {
     try {
         const user = await User.findById(req.user.id).select("gcash");
@@ -85,5 +86,55 @@ export const getGCashInfo = async (req, res) => {
         res.json({ gcash: user.gcash });
     } catch (error) {
         res.status(500).json({ message: "Failed to fetch GCash info" });
+    }
+};
+
+export const getGCashQR = async (req, res) => {
+    try {
+        const { userId } = req.params; // Get the target user ID from URL params
+
+        // Find the target user (doctor, pharmacist, or institute)
+        const user = await User.findById(userId).select("gcash role firstName lastName facilityName");
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Check if user is a professional who should have GCash
+        const allowedRoles = ["doctor", "pharmacist", "institute"];
+        if (!allowedRoles.includes(user.role)) {
+            return res.status(403).json({ message: "This user doesn't have a GCash QR" });
+        }
+
+        if (!user.gcash || !user.gcash.qrData) {
+            return res.status(404).json({ message: "No GCash QR found for this user" });
+        }
+
+        const qrString = user.gcash.qrData;
+
+        // Generate QR code image from the stored string
+        const dataUrl = await QRCode.toDataURL(qrString);
+
+        // Extract base64 part
+        const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
+
+        // Convert to buffer
+        const qrBuffer = Buffer.from(base64Data, "base64");
+
+        // Get user display name for potential use
+        const displayName = user.facilityName || `${user.firstName} ${user.lastName}`;
+
+        // Send as image with optional headers
+        res.writeHead(200, {
+            "Content-Type": "image/png",
+            "Content-Length": qrBuffer.length,
+            "X-User-Name": displayName, // Optional: send user info in headers
+            "X-User-Role": user.role
+        });
+        res.end(qrBuffer);
+
+    } catch (error) {
+        console.error("Error generating QR code:", error);
+        res.status(500).json({ message: "Internal server error" });
     }
 };

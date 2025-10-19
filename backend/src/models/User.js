@@ -84,7 +84,6 @@ const userSchema = new mongoose.Schema(
       qrData: String,         // decoded string
       accountName: String,    // manually provided by user
       accountNumber: String,  // manually provided by user
-      isVerified: { type: Boolean, default: false },
     }
 
   },

@@ -39,7 +39,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/booking", bookingRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/doctor-schedule", doctorScheduleRoutes);
-app.use("/api/gcashSetup", gcashSetupRoutes);
+app.use("/api/gcash-setup", gcashSetupRoutes);
 app.use("/api/onboarding", onboardingRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/pricing", pricingRoutes);

@@ -9,17 +9,41 @@ import User from "../models/User.js";
 export async function getPendingUsers(req, res) {
   try {
     const pendingUsers = await User.find({ status: "pending" }).select(
-      "_id firstName lastName profession birthDate licenseNumber facilityName"
+      "_id firstName lastName profession birthDate licenseNumber facilityName adminCode role"
     );
 
-    // Only include non-null fields
+    // Format users with role-specific information
     const formattedUsers = pendingUsers.map(user => {
-      const userObj = { _id: user._id, firstName: user.firstName, lastName: user.lastName };
+      const userObj = {
+        _id: user._id,
+        role: user.role, // Include the requested role
+        firstName: user.firstName,
+        lastName: user.lastName
+      };
 
-      if (user.profession) userObj.profession = user.profession;
-      if (user.birthDate) userObj.birthDate = user.birthDate.toISOString().split("T")[0];
-      if (user.licenseNumber) userObj.licenseNumber = user.licenseNumber;
-      if (user.facilityName) userObj.facilityName = user.facilityName;
+      // Add role-specific fields
+      switch (user.role) {
+        case "doctor":
+          if (user.profession) userObj.profession = user.profession;
+          if (user.birthDate) userObj.birthDate = user.birthDate.toISOString().split("T")[0];
+          if (user.licenseNumber) userObj.licenseNumber = user.licenseNumber;
+          break;
+
+        case "pharmacist":
+          if (user.birthDate) userObj.birthDate = user.birthDate.toISOString().split("T")[0];
+          if (user.licenseNumber) userObj.licenseNumber = user.licenseNumber;
+          userObj.profession = "Pharmacist"; // Always show for pharmacists
+          break;
+
+        case "institute":
+          if (user.facilityName) userObj.facilityName = user.facilityName;
+          break;
+
+        case "admin":
+          if (user.adminCode) userObj.adminCode = user.adminCode;
+          if (user.birthDate) userObj.birthDate = user.birthDate.toISOString().split("T")[0];
+          break;
+      }
 
       return userObj;
     });
