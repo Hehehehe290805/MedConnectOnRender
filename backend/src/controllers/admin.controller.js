@@ -14,11 +14,11 @@ export async function getPendingUsers(req, res) {
 
     // Format users with role-specific information
     const formattedUsers = pendingUsers.map(user => {
-      const userObj = {
-        _id: user._id,
+      const userObj = { 
+        _id: user._id, 
         role: user.role, // Include the requested role
-        firstName: user.firstName,
-        lastName: user.lastName
+        firstName: user.firstName, 
+        lastName: user.lastName 
       };
 
       // Add role-specific fields
@@ -28,17 +28,17 @@ export async function getPendingUsers(req, res) {
           if (user.birthDate) userObj.birthDate = user.birthDate.toISOString().split("T")[0];
           if (user.licenseNumber) userObj.licenseNumber = user.licenseNumber;
           break;
-
+          
         case "pharmacist":
           if (user.birthDate) userObj.birthDate = user.birthDate.toISOString().split("T")[0];
           if (user.licenseNumber) userObj.licenseNumber = user.licenseNumber;
           userObj.profession = "Pharmacist"; // Always show for pharmacists
           break;
-
+          
         case "institute":
           if (user.facilityName) userObj.facilityName = user.facilityName;
           break;
-
+          
         case "admin":
           if (user.adminCode) userObj.adminCode = user.adminCode;
           if (user.birthDate) userObj.birthDate = user.birthDate.toISOString().split("T")[0];
@@ -163,63 +163,80 @@ export async function getPendingSuggestions(req, res) {
     res.status(500).json({ message: "Internal Server Error" });
   }
 }
-async function approveHelper(req, res, type) {
+export async function approveSuggestion(req, res) {
   try {
     const { id } = req.body;
-    if (!id) return res.status(400).json({ message: "ID is required" });
 
-    let Model;
-    switch (type) {
-      case "specialty": Model = Specialty; break;
-      case "subspecialty": Model = Subspecialty; break;
-      case "service": Model = Service; break;
-      default: return res.status(400).json({ message: "Invalid type" });
+    if (!id) {
+      return res.status(400).json({
+        message: "ID is required"
+      });
     }
 
-    const item = await Model.findById(id);
-    if (!item) return res.status(404).json({ message: `${type} not found` });
-    if (item.status === "verified") return res.status(400).json({ message: `${type} already verified` });
+    // Try to find the item in each collection
+    let item = await Specialty.findById(id);
+    let type = "specialty";
 
-    // Add admin approval information with temporary ID
+    if (!item) {
+      item = await Subspecialty.findById(id);
+      type = "subspecialty";
+    }
+
+    if (!item) {
+      item = await Service.findById(id);
+      type = "service";
+    }
+
+    // If still not found, return error
+    if (!item) {
+      return res.status(404).json({ message: "Item not found in any category" });
+    }
+
+    // Check if already verified
+    if (item.status === "verified") {
+      return res.status(400).json({ message: `${type} is already verified` });
+    }
+
+    // Update with admin approval
     item.status = "verified";
-    item.approvedBy = req.user._id; 
+    item.approvedBy = req.user._id; // Current admin's ID
     await item.save();
 
     return res.status(200).json({
       message: `${type.charAt(0).toUpperCase() + type.slice(1)} approved successfully`,
-      item
+      item,
+      type
     });
   } catch (error) {
     console.error("Error approving item:", error);
     return res.status(500).json({ message: "Internal Server Error" });
   }
 }
-export async function approveSpecialty(req, res) { return approveHelper(req, res, "specialty"); }
-export async function approveSubspecialty(req, res) { return approveHelper(req, res, "subspecialty"); }
-export async function approveService(req, res) { return approveHelper(req, res, "service"); }
 
 export async function getPendingClaims(req, res) {
   try {
-    // Specialty claims (no subspecialtyID)
+    // Use claimType field to distinguish between specialty and subspecialty
     const specialtyClaims = await Doctor_Specialty.find({
       status: "pending",
-      specialtyId: { $exists: true }
+      claimType: "specialty" // 🆕 Use claimType instead of field existence
     })
       .populate("doctorId", "firstName lastName email")
-      .populate("specialtyId", "name"); // NO durationMinutes for specialty
+      .populate("specialtyId", "name");
 
-    // Subspecialty claims (has subspecialtyId)
     const subspecialtyClaims = await Doctor_Specialty.find({
       status: "pending",
-      subspecialtyId: { $exists: true },
+      claimType: "subspecialty" // 🆕 Use claimType instead of field existence
     })
       .populate("doctorId", "firstName lastName email")
-      .populate("subspecialtyId", "name"); // NO durationMinutes for subspecialty
+      .populate("subspecialtyId", "name");
 
-    // Service claims (institutes) - ONLY service has durationMinutes
-    const serviceClaims = await Institute_Service.find({ status: "pending" })
+    // Service claims (institutes)
+    const serviceClaims = await Institute_Service.find({
+      status: "pending",
+      claimType: "service" // 🆕 Add claimType for consistency
+    })
       .populate("instituteId", "facilityName email")
-      .populate("serviceId", "name durationMinutes"); // durationMinutes ONLY here
+      .populate("serviceId", "name");
 
     res.status(200).json({
       success: true,
@@ -234,37 +251,38 @@ export async function getPendingClaims(req, res) {
     res.status(500).json({ message: "Internal Server Error" });
   }
 }
-function getClaimModel(type) {
-  switch (type) {
-    case "specialty":
-    case "subspecialty":
-      return Doctor_Specialty;
-    case "service":
-      return Institute_Service;
-    default:
-      return null;
-  }
-}
-
 export async function approveClaim(req, res) {
   try {
-    const { claimId, type } = req.body;
+    const { claimId } = req.body;
     const adminId = req.user._id;
 
-    if (!claimId || !type) {
-      return res.status(400).json({ message: "claimId and type are required" });
+    if (!claimId) {
+      return res.status(400).json({ message: "claimId is required" });
     }
 
-    const Model = getClaimModel(type);
-    if (!Model) {
-      return res.status(400).json({ message: "Invalid claim type" });
+    // Try to find the claim in each model
+    let claim = await Doctor_Specialty.findById(claimId);
+    let collectionType = "doctor_specialty";
+
+    if (!claim) {
+      claim = await Institute_Service.findById(claimId);
+      collectionType = "institute_service";
     }
 
-    const claim = await Model.findById(claimId);
+    // If still not found, return error
     if (!claim) {
       return res.status(404).json({ message: "Claim not found" });
     }
 
+    // 🆕 NOW WE CAN USE THE claimType FIELD!
+    const type = claim.claimType;
+
+    // Check if already approved
+    if (claim.status === "verified") {
+      return res.status(400).json({ message: "Claim is already approved" });
+    }
+
+    // Approve the claim
     claim.status = "verified";
     claim.approvedBy = adminId;
     await claim.save();
@@ -273,10 +291,10 @@ export async function approveClaim(req, res) {
       success: true,
       message: `${type.charAt(0).toUpperCase() + type.slice(1)} claim approved successfully`,
       claim,
+      type
     });
   } catch (error) {
     console.error("Error approving claim:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 }
-

@@ -1,8 +1,7 @@
 import express from "express";
 import {
-    getSpecialties, getSubspecialtiesBySpecialty, getServices, getInstituteServices,
-    suggestSpecialty, suggestSubspecialty, suggestService,
-    claimSpecialty, claimSubspecialty, claimService
+    getSpecialties, getSubspecialtiesBySpecialty, getServices, getServicesByProvider,
+    suggest, claim
 } from "../controllers/specialtyAndService.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 
@@ -11,14 +10,9 @@ const router = express.Router();
 router.get("/specialties", protectRoute, getSpecialties);
 router.get("/subspecialties/:specialtyId", protectRoute, getSubspecialtiesBySpecialty);
 router.get("/services", protectRoute, getServices);
-router.post("/institute-services", protectRoute, getInstituteServices);
+router.post("/provider-services", protectRoute, getServicesByProvider);
 
-router.post("/suggest-specialty", protectRoute, suggestSpecialty);
-router.post("/suggest-subspecialty", protectRoute, suggestSubspecialty);
-router.post("/suggest-service", protectRoute, suggestService);
-
-router.post("/claim-specialty", protectRoute, claimSpecialty);
-router.post("/claim-subspecialty", protectRoute, claimSubspecialty);
-router.post("/claim-service", protectRoute, claimService);
+router.post("/suggest", protectRoute, suggest);
+router.post("/claim", protectRoute, claim);
 
 export default router;

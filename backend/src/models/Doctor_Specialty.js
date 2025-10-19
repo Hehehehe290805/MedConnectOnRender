@@ -15,14 +15,19 @@ const Doctor_SpecialtySchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: "Subspecialty",
         },
+        claimType: { // 🆕 ADD THIS FIELD
+            type: String,
+            enum: ["specialty", "subspecialty"],
+            required: true,
+        },
         status: {
             type: String,
             enum: ["pending", "verified"],
             default: "pending",
         },
         approvedBy: {
-              type: mongoose.Schema.Types.ObjectId,
-              ref: "User",
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
         },
     },
     { timestamps: true }

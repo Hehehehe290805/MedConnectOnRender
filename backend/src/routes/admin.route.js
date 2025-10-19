@@ -1,7 +1,7 @@
 import express from "express";
 import { 
   getPendingUsers, approveRole, getAdmins,
-  getPendingSuggestions, approveSpecialty, approveSubspecialty, approveService,
+  getPendingSuggestions, approveSuggestion,
   getPendingClaims, approveClaim
   } from "../controllers/admin.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
@@ -16,9 +16,7 @@ router.get("/admins", protectRoute, adminOnly, getAdmins);
 
 // Specialty and Service Management
 router.get("/pending-suggestions", protectRoute, adminOnly, getPendingSuggestions);
-router.patch("/approve-specialty", protectRoute, adminOnly, approveSpecialty);
-router.patch("/approve-subspecialty", protectRoute, adminOnly, approveSubspecialty);
-router.patch("/approve-service", protectRoute, adminOnly, approveService);
+router.patch("/approve", protectRoute, adminOnly, approveSuggestion);
 router.get("/pending-claims", protectRoute, adminOnly, getPendingClaims);
 router.patch("/approve-claim", protectRoute, adminOnly, approveClaim);
 

@@ -3,6 +3,7 @@ import Institute_Service from "../models/Institute_Service.js";
 import Service from "../models/Service.js";
 import Specialty from "../models/Specialty.js";
 import Subspecialty from "../models/Subspecialty.js";
+import User from "../models/User.js";
 
 // View Specialties
 async function fetchHelper(req, res, type, filter = {}) {
@@ -34,14 +35,32 @@ export async function getServices(req, res) {
     return fetchHelper(req, res, "service");
 }
 
-async function fetchServicesHelper(targetId, type) {
+export async function getServicesByProvider(req, res) {
     try {
+        const { targetId, targetType } = req.body;
+
+        if (!targetId || !targetType) {
+            return res.status(400).json({
+                success: false,
+                message: "targetId and targetType are required"
+            });
+        }
+
+        // Validate targetType
+        const validTypes = ["doctor", "institute"];
+        if (!validTypes.includes(targetType)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid targetType. Must be 'doctor' or 'institute'"
+            });
+        }
+
         let Model;
         let filter = { status: "verified" };
         let populateFields = [];
         let format = (c) => c;
 
-        switch (type) {
+        switch (targetType) {
             case "doctor":
                 Model = Doctor_Specialty;
                 filter.doctorId = targetId;
@@ -69,36 +88,19 @@ async function fetchServicesHelper(targetId, type) {
                     durationMinutes: c.durationMinutes
                 });
                 break;
-
-            default:
-                throw new Error("Invalid type");
         }
 
         let query = Model.find(filter);
         populateFields.forEach(f => query.populate(f));
         const results = await query.sort({ createdAt: -1 });
-            
-        return { success: true, items: results.map(format) };
-    } catch (error) {
-        console.error("Error fetching target services:", error);
-        throw error;
-    }
-}
-export async function getInstituteServices(req, res) {
-    try {
-        const { targetId, targetType } = req.body;
 
-        if (!targetId || !targetType) {
-            return res.status(400).json({
-                success: false,
-                message: "targetId and targetType are required"
-            });
-        }
+        res.status(200).json({
+            success: true,
+            items: results.map(format)
+        });
 
-        const result = await fetchServicesHelper(targetId, targetType);
-        res.status(200).json(result);
     } catch (error) {
-        console.error("Error in getUserServices:", error);
+        console.error("Error fetching services:", error);
         res.status(500).json({
             success: false,
             message: "Internal Server Error"
@@ -107,28 +109,63 @@ export async function getInstituteServices(req, res) {
 }
 
 // Suggest Specialties
-async function suggestHelper(req, res, type) {
+export async function suggest(req, res) {
     try {
         const userId = req.user._id;
-        const { name, rootSpecialtyId } = req.body;
+        const { name, type, rootSpecialtyId } = req.body;
 
-        // Required fields
-        if (!name || (type === "subspecialty" && !rootSpecialtyId)) {
-            const missing = ["name"];
-            if (type === "subspecialty") missing.push("rootSpecialtyId");
-            return res.status(400).json({ message: "Missing required fields", missingFields: missing });
+        // Required fields validation
+        if (!name || !type) {
+            const missing = [];
+            if (!name) missing.push("name");
+            if (!type) missing.push("type");
+            return res.status(400).json({
+                message: "Missing required fields",
+                missingFields: missing
+            });
+        }
+
+        // Validate type
+        const validTypes = ["specialty", "subspecialty", "service"];
+        if (!validTypes.includes(type)) {
+            return res.status(400).json({
+                message: "Invalid type",
+                validTypes: validTypes
+            });
+        }
+
+        // Additional validation for subspecialty
+        if (type === "subspecialty" && !rootSpecialtyId) {
+            return res.status(400).json({
+                message: "Missing required fields",
+                missingFields: ["rootSpecialtyId"]
+            });
         }
 
         let Model;
         let extra = {};
+
         switch (type) {
-            case "specialty": Model = Specialty; break;
+            case "specialty":
+                Model = Specialty;
+                break;
+
             case "subspecialty":
                 Model = Subspecialty;
+                // Check if rootSpecialty exists and is verified
+                const rootSpecialty = await Specialty.findById(rootSpecialtyId);
+                if (!rootSpecialty) {
+                    return res.status(404).json({ message: "Root specialty not found" });
+                }
+                if (rootSpecialty.status !== "verified") {
+                    return res.status(400).json({ message: "Cannot add subspecialty to a pending or unverified root specialty" });
+                }
                 extra.rootSpecialty = rootSpecialtyId;
                 break;
-            case "service": Model = Service; break;
-            default: return res.status(400).json({ message: "Invalid type" });
+
+            case "service":
+                Model = Service;
+                break;
         }
 
         // Check for duplicates (case-insensitive)
@@ -136,9 +173,20 @@ async function suggestHelper(req, res, type) {
             name: { $regex: `^${name}$`, $options: "i" },
             ...(type === "subspecialty" ? { rootSpecialty: rootSpecialtyId } : {})
         });
-        if (exists) return res.status(400).json({ message: `${type} already exists or is pending approval` });
 
-        const newItem = new Model({ name, status: "pending", suggestedBy: userId, ...extra });
+        if (exists) {
+            return res.status(400).json({
+                message: `${type} already exists or is pending approval`
+            });
+        }
+
+        const newItem = new Model({
+            name,
+            status: "pending",
+            suggestedBy: userId,
+            ...extra
+        });
+
         await newItem.save();
 
         return res.status(201).json({
@@ -151,18 +199,55 @@ async function suggestHelper(req, res, type) {
         return res.status(500).json({ message: "Internal Server Error" });
     }
 }
-export async function suggestSpecialty(req, res) { return suggestHelper(req, res, "specialty"); }
-export async function suggestSubspecialty(req, res) { return suggestHelper(req, res, "subspecialty"); }
-export async function suggestService(req, res) { return suggestHelper(req, res, "service"); }
 
 // Claim Specialty or Subspecialty
-async function claimHelper(req, res, type, extraFields = {}) {
+export async function claim(req, res) {
     try {
         const userId = req.user._id;
-        const { targetId } = req.body;
+        const { targetId, type, durationMinutes } = req.body;
 
-        if (!targetId) {
-            return res.status(400).json({ message: "Target ID is required" });
+        // Required fields validation
+        if (!targetId || !type) {
+            const missing = [];
+            if (!targetId) missing.push("targetId");
+            if (!type) missing.push("type");
+            return res.status(400).json({
+                message: "Missing required fields",
+                missingFields: missing
+            });
+        }
+
+        // Validate type
+        const validTypes = ["specialty", "subspecialty", "service"];
+        if (!validTypes.includes(type)) {
+            return res.status(400).json({
+                message: "Invalid type",
+                validTypes: validTypes
+            });
+        }
+
+        // Check user role and status
+        const user = await User.findById(userId).select("role status");
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        let requiredRole, requiredStatus;
+        switch (type) {
+            case "specialty":
+            case "subspecialty":
+                requiredRole = "doctor";
+                requiredStatus = "onBoarded";
+                break;
+            case "service":
+                requiredRole = "institute";
+                requiredStatus = "onBoarded";
+                break;
+        }
+
+        if (user.role !== requiredRole) {
+            return res.status(403).json({ message: `Only ${requiredRole}s can claim ${type}s` });
+        }
+        if (user.status !== requiredStatus) {
+            return res.status(403).json({ message: `Your account must be ${requiredStatus} to claim ${type}s` });
         }
 
         let LinkModel;
@@ -170,22 +255,32 @@ async function claimHelper(req, res, type, extraFields = {}) {
         const linkData = {
             status: "pending",
             approvedBy: null,
-            ...extraFields // SPREAD the extra fields here
+            claimType: type, // 🆕 ADD THIS FIELD to track claim type
         };
 
-        // 🔸 Decide what type of claim we're making
+        // Add durationMinutes for service claims
+        if (type === "service") {
+            if (!durationMinutes) {
+                return res.status(400).json({ message: "durationMinutes is required for service claims" });
+            }
+            linkData.durationMinutes = durationMinutes;
+        }
+
+        // Determine models and set appropriate fields
         switch (type) {
             case "specialty":
                 TargetModel = Specialty;
                 LinkModel = Doctor_Specialty;
                 linkData.doctorId = userId;
                 linkData.specialtyId = targetId;
+                linkData.subspecialtyId = null;
                 break;
 
             case "subspecialty":
                 TargetModel = Subspecialty;
                 LinkModel = Doctor_Specialty;
                 linkData.doctorId = userId;
+                linkData.specialtyId = null;
                 linkData.subspecialtyId = targetId;
                 break;
 
@@ -195,56 +290,49 @@ async function claimHelper(req, res, type, extraFields = {}) {
                 linkData.instituteId = userId;
                 linkData.serviceId = targetId;
                 break;
-
-            default:
-                return res.status(400).json({ message: "Invalid type" });
         }
 
-        // 🔸 Make sure the target exists
+        // Make sure the target exists AND is verified
         const targetExists = await TargetModel.findById(targetId);
         if (!targetExists) {
             return res.status(404).json({ message: `${type} not found` });
         }
+        if (targetExists.status !== "verified") {
+            return res.status(400).json({ message: `Cannot claim ${type} that is not verified` });
+        }
 
-        // 🔸 Prevent duplicate claim
-        const existingLink = await LinkModel.findOne(
-            type === "service"
-                ? { instituteId: userId, serviceId: targetId }
-                : type === "specialty"
-                    ? { doctorId: userId, specialtyId: targetId }
-                    : { doctorId: userId, subspecialtyId: targetId }
-        );
+        // Prevent duplicate claim
+        let existingLink;
+        if (type === "service") {
+            existingLink = await LinkModel.findOne({
+                instituteId: userId,
+                serviceId: targetId
+            });
+        } else {
+            const query = { doctorId: userId };
+            if (type === "specialty") {
+                query.specialtyId = targetId;
+            } else {
+                query.subspecialtyId = targetId;
+            }
+            existingLink = await LinkModel.findOne(query);
+        }
 
         if (existingLink) {
             return res.status(400).json({ message: `You already claimed this ${type}` });
         }
 
-        // 🔸 Create new pending claim
+        // Create new pending claim
         const newClaim = await LinkModel.create(linkData);
 
         res.status(201).json({
             success: true,
-            message: `Successfully claimed ${type}`,
+            message: `Successfully claimed ${type}. Waiting for admin approval.`,
             item: newClaim,
         });
 
     } catch (error) {
-        console.error(`Error claiming ${type}:`, error);
+        console.error(`Error claiming item:`, error);
         res.status(500).json({ message: "Internal Server Error" });
     }
-}
-export async function claimSpecialty(req, res) {
-    return claimHelper(req, res, "specialty"); // No extra fields needed
-}
-export async function claimSubspecialty(req, res) {
-    return claimHelper(req, res, "subspecialty"); // No extra fields needed
-}
-export async function claimService(req, res) {
-    const { durationMinutes } = req.body;
-
-    if (!durationMinutes) {
-        return res.status(400).json({ message: "durationMinutes is required for service claims" });
-    }
-
-    return claimHelper(req, res, "service", { durationMinutes }); // Pass duration as extra field
 }

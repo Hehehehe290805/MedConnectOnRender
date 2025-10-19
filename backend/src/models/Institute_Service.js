@@ -10,6 +10,11 @@ const Institute_ServiceSchema = new mongoose.Schema(
         serviceId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Service",
+        }, 
+        claimType: { 
+            type: String,
+            enum: ["service"],
+            required: true,
         },
         durationMinutes: {
             type: Number, 

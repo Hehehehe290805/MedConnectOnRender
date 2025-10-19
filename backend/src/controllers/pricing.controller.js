@@ -1,14 +1,84 @@
+import Doctor_Specialty from "../models/Doctor_Specialty.js"
 import Institute_Service from "../models/Institute_Service.js";
 import Pricing from "../models/Pricing.js";
 import Service from "../models/Service.js";
+import User from "../models/User.js"
 
 // Set or Update Pricing
 export async function setOrUpdatePricing(req, res) {
-    const providerId = req.user._id; // Doctor or Institute ID
-    const { serviceId, price } = req.body;
+    const providerId = req.user._id;
+    const { price, serviceId } = req.body;
 
     try {
-        let pricing = await Pricing.findOne({ providerId, serviceId });
+        // Validate price
+        if (price === undefined || price === null) {
+            return res.status(400).json({ message: "Price is required" });
+        }
+
+        if (typeof price !== 'number' || price < 0) {
+            return res.status(400).json({ message: "Price must be a positive number" });
+        }
+
+        // Get user role and verify they exist
+        const user = await User.findById(providerId).select("role");
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        let targetServiceId = null;
+
+        if (user.role === "doctor") {
+            // 🚫 DOCTORS: IGNORE any serviceId they pass and force Consultation service
+            const consultationService = await Service.findOne({ name: "Consultation" });
+            if (!consultationService) {
+                return res.status(500).json({
+                    message: "Consultation service not found in system"
+                });
+            }
+            targetServiceId = consultationService._id;
+
+            // Check if doctor has at least one verified specialty or subspecialty
+            const verifiedClaims = await Doctor_Specialty.findOne({
+                doctorId: providerId,
+                status: "verified"
+            });
+
+            if (!verifiedClaims) {
+                return res.status(403).json({
+                    message: "You need at least one verified specialty or subspecialty to set pricing"
+                });
+            }
+
+        } else if (user.role === "institute") {
+            // INSTITUTES: Require serviceId
+            if (!serviceId) {
+                return res.status(400).json({
+                    message: "serviceId is required for institutes"
+                });
+            }
+            targetServiceId = serviceId;
+
+            // Institutes can only price services they have verified claims for
+            const verifiedServiceClaim = await Institute_Service.findOne({
+                instituteId: providerId,
+                serviceId: targetServiceId,
+                status: "verified"
+            });
+
+            if (!verifiedServiceClaim) {
+                return res.status(403).json({
+                    message: "You can only set pricing for services you have verified claims for"
+                });
+            }
+
+        } else {
+            return res.status(403).json({
+                message: "Only doctors and institutes can set pricing"
+            });
+        }
+
+        // Find or create pricing
+        let pricing = await Pricing.findOne({ providerId, serviceId: targetServiceId });
 
         if (pricing) {
             // Update existing pricing
@@ -17,16 +87,18 @@ export async function setOrUpdatePricing(req, res) {
             // Create new pricing
             pricing = new Pricing({
                 providerId,
-                serviceId,
+                serviceId: targetServiceId,
                 price
             });
         }
 
         await pricing.save();
+
         return res.status(200).json({
             message: "Pricing set/updated successfully",
             pricing
         });
+
     } catch (error) {
         console.error("Error setting/updating pricing:", error);
         return res.status(500).json({ message: "Internal server error" });
