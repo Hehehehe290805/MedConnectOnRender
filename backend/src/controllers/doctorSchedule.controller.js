@@ -1,11 +1,8 @@
 import DoctorSchedule from "../models/DoctorSchedule.js";
-import Appointment from "../models/Doctor_Appointment.js";
-import User from "../models/User.js";
+import Appointment_Service from "../models/Appointment_Service.js";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
-
-import { createPayMongoPayment } from "../utils/paymongo.js";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -14,7 +11,7 @@ dayjs.tz.setDefault("Asia/Manila"); // Philippine Time
 const toPhTime = (date) => dayjs(date).tz("Asia/Manila");
 const nowPhTime = () => dayjs().tz("Asia/Manila");
 
-// Generate available slots in PH time
+// 📅 Generate available slots in PH time
 async function generateAvailableSlots(doctorId, daysAhead = 5) {
     if (!doctorId) return [];
 
@@ -52,7 +49,7 @@ async function generateAvailableSlots(doctorId, daysAhead = 5) {
             const slotStart = currentTime.toDate();
             const slotEnd = currentTime.add(slotDuration, "minute").toDate();
 
-            const overlapping = await Appointment.findOne({
+            const overlapping = await Appointment_Service.findOne({
                 doctorId,
                 status: { $in: ["booked", "confirmed", "cancelled", "completed"] },
                 $or: [
@@ -73,15 +70,15 @@ async function generateAvailableSlots(doctorId, daysAhead = 5) {
     return slots;
 }
 
-// Doctor's private calendar (for logged-in doctor)
+// 🧑‍⚕️ Doctor's private calendar (for logged-in doctor)
 export async function getDoctorCalendar(req, res) {
     try {
         const { daysAhead = 5 } = req.query;
-        const doctorId = req.user?._id;
+        const doctorId = req.user?.id;
         if (!doctorId) return res.status(400).json({ message: "doctorId is required" });
 
         const slots = await generateAvailableSlots(doctorId, Number(daysAhead));
-        const appointments = await Appointment.find({
+        const appointments = await Appointment_Service.find({
             doctorId,
             status: { $in: ["booked", "confirmed", "cancelled", "completed"] },
             start: { $gte: new Date() },
@@ -89,7 +86,7 @@ export async function getDoctorCalendar(req, res) {
 
         const events = [
             ...slots.map((s) => ({
-                start: toPhTime(s.start).format(), // PH time ISO string
+                start: toPhTime(s.start).format(),
                 end: toPhTime(s.end).format(),
                 title: "Available",
                 type: "availability",
@@ -121,14 +118,14 @@ export async function getDoctorCalendar(req, res) {
     }
 }
 
-// Public calendar (anyone can view)
+// 🌐 Public calendar (anyone can view)
 export async function getDoctorPublicCalendar(req, res) {
     try {
         const { doctorId, daysAhead = 5 } = req.query;
         if (!doctorId) return res.status(400).json({ message: "doctorId is required" });
 
         const slots = await generateAvailableSlots(doctorId, Number(daysAhead));
-        const appointments = await Appointment.find({
+        const appointments = await Appointment_Service.find({
             doctorId,
             status: { $in: ["booked", "confirmed", "cancelled", "completed"] },
             start: { $gte: new Date() },
@@ -170,102 +167,150 @@ export async function getDoctorPublicCalendar(req, res) {
     }
 }
 
+// 🕒 Set availability (Private — uses req.user.id)
 export async function setAvailability(req, res) {
-    const { doctorId, startHour, endHour, daysOfWeek, isActive } = req.body;
-
-    if (!doctorId || !startHour || !endHour || !daysOfWeek) {
-        return res.status(400).json({ message: "Missing required fields" });
-    }
-
-    const availability = await DoctorSchedule.findOneAndUpdate(
-        { doctorId },
-        { startHour, endHour, daysOfWeek, isActive },
-        { upsert: true, new: true }
-    );
-
-    res.status(200).json({ success: true, availability });
-}
-
-export async function confirmAppointment(req, res) {
     try {
-        const { appointmentId } = req.body;
-        const doctorId = req.user._id;
+        const doctorId = req.user.id;
+        const { startHour, endHour, daysOfWeek, isActive } = req.body;
 
-        const appointment = await Doctor_Appointment.findById(appointmentId);
-        if (!appointment) return res.status(404).json({ message: "Appointment not found" });
-        if (appointment.doctorId.toString() !== doctorId.toString()) return res.status(403).json({ message: "Cannot confirm this appointment" });
-
-        if (["confirmed", "completed", "cancelled", "no show"].includes(appointment.status))
-            return res.status(400).json({ message: `Cannot confirm appointment in status ${appointment.status}` });
-
-        appointment.status = "confirmed";
-        appointment.depositPaid = true; // deposit now belongs to doctor
-        await appointment.save();
-
-        res.status(200).json({ success: true, message: "Appointment confirmed", appointment });
-
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Internal server error" });
-    }
-}
-
-export async function completeAppointment(req, res) {
-    try {
-        const { appointmentId } = req.body; // only "completed" is allowed now
-        const doctorId = req.user._id;
-
-        if (!appointmentId)
-            return res.status(400).json({ message: "Appointment ID is required" });
-
-        const appointment = await Doctor_Appointment.findById(appointmentId);
-        if (!appointment)
-            return res.status(404).json({ message: "Appointment not found" });
-
-        if (appointment.doctorId.toString() !== doctorId.toString())
-            return res.status(403).json({ message: "Cannot complete this appointment" });
-
-        if (appointment.status === "completed")
-            return res.status(400).json({ message: "Appointment already completed" });
-
-        // Mark appointment as completed
-        appointment.status = "completed";
-
-        // Handle remaining balance payment
-        if (!appointment.balancePaid) {
-            const doctor = await User.findById(appointment.doctorId);
-            const remainingAmount = appointment.amount - appointment.paymentDeposit;
-
-            // Create a Payment record for balance
-            await Payment.create({
-                appointmentId: appointment._id,
-                doctorId: doctor._id,
-                patientId: appointment.patientId,
-                amount: remainingAmount,
-                method: appointment.method,
-                status: "pending",
-                type: "balance",
-            });
-
-            if (appointment.method === "paymongo") {
-                const paymentLink = await createPayMongoPayment({ ...appointment.toObject(), amount: remainingAmount }, doctor);
-                appointment.paymentLink = paymentLink;
-            } else if (appointment.method === "gcash") {
-                // Assume doctor collects manually
-                appointment.balancePaid = true;
-            }
+        if (!startHour || !endHour || !daysOfWeek) {
+            return res.status(400).json({ message: "Missing required fields" });
         }
 
-        await appointment.save();
+        const availability = await DoctorSchedule.findOneAndUpdate(
+            { doctorId },
+            { startHour, endHour, daysOfWeek, isActive },
+            { upsert: true, new: true }
+        );
 
-        res.status(200).json({
-            success: true,
-            message: "Appointment marked as completed",
-            appointment
-        });
-
-    } catch (err) {
-        console.error(err);
+        res.status(200).json({ success: true, availability });
+    } catch (error) {
+        console.error("Error setting availability:", error);
         res.status(500).json({ message: "Internal server error" });
     }
 }
+
+export const acceptAppointment = async (req, res) => {
+    try {
+        const doctorId = req.user._id;
+        const { appointmentId } = req.body;
+
+        const appointment = await Appointment_Service.findById(appointmentId);
+        if (!appointment) return res.status(404).json({ message: "Appointment not found" });
+
+        if (appointment.doctorId.toString() !== doctorId.toString())
+            return res.status(403).json({ message: "Only the assigned doctor can accept this appointment" });
+
+        if (appointment.status !== "pending_accept") {
+            return res.status(400).json({ message: "Appointment cannot be accepted at this stage" });
+        }
+
+        appointment.status = "awaiting_deposit";
+        await appointment.save();
+
+        res.status(200).json({ success: true, message: "Appointment accepted. Awaiting patient deposit.", appointment });
+    } catch (err) {
+        console.error("Error accepting appointment:", err);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+export const rejectAppointment = async (req, res) => {
+    try {
+        const doctorId = req.user._id;
+        const { appointmentId, reason } = req.body;
+
+        const appointment = await Appointment_Service.findById(appointmentId);
+        if (!appointment) return res.status(404).json({ message: "Appointment not found" });
+
+        if (appointment.doctorId.toString() !== doctorId.toString())
+            return res.status(403).json({ message: "Only the assigned doctor can reject this appointment" });
+
+        if (appointment.status !== "pending_accept") {
+            return res.status(400).json({ message: "Only appointments pending acceptance can be rejected" });
+        }
+
+        appointment.status = "rejected";
+        appointment.rejectionReason = reason || "No reason provided";
+        await appointment.save();
+
+        res.status(200).json({ success: true, message: "Appointment rejected.", appointment });
+    } catch (err) {
+        console.error("Error rejecting appointment:", err);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+export const confirmDeposit = async (req, res) => {
+    try {
+        const doctorId = req.user._id;
+        const { appointmentId } = req.body;
+
+        const appointment = await Appointment_Service.findById(appointmentId);
+        if (!appointment) return res.status(404).json({ message: "Appointment not found" });
+
+        if (appointment.doctorId.toString() !== doctorId.toString())
+            return res.status(403).json({ message: "Only the assigned doctor can confirm deposit" });
+
+        if (!appointment.depositPaid || appointment.status !== "booked") {
+            return res.status(400).json({ message: "Deposit not yet paid or appointment not in correct status" });
+        }
+
+        appointment.status = "confirmed";
+        await appointment.save();
+
+        res.status(200).json({ success: true, message: "Deposit confirmed. Appointment is now confirmed.", appointment });
+    } catch (err) {
+        console.error("Error confirming deposit:", err);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+export const markComplete = async (req, res) => {
+    try {
+        const doctorId = req.user._id;
+        const { appointmentId } = req.body;
+
+        const appointment = await Appointment_Service.findById(appointmentId);
+        if (!appointment) return res.status(404).json({ message: "Appointment not found" });
+
+        if (appointment.doctorId.toString() !== doctorId.toString())
+            return res.status(403).json({ message: "Only the assigned doctor can mark appointment as completed" });
+
+        if (!["confirmed", "ongoing", "confirm_fully_paid"].includes(appointment.status)) {
+            return res.status(400).json({ message: "Appointment cannot be completed at this stage" });
+        }
+
+        appointment.status = "marked_complete";
+        await appointment.save();
+
+        res.status(200).json({ success: true, message: "Appointment marked as completed.", appointment });
+    } catch (err) {
+        console.error("Error completing appointment:", err);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+export const confirmFullPayment = async (req, res) => {
+    try {
+        const doctorId = req.user._id;
+        const { appointmentId } = req.body;
+
+        const appointment = await Appointment_Service.findById(appointmentId);
+        if (!appointment) return res.status(404).json({ message: "Appointment not found" });
+
+        if (appointment.doctorId.toString() !== doctorId.toString())
+            return res.status(403).json({ message: "Only the assigned doctor can confirm full payment" });
+
+        if (!appointment.balancePaid || appointment.status !== "fully_paid") {
+            return res.status(400).json({ message: "Full payment not yet made or appointment not in correct status" });
+        }
+
+        appointment.status = "confirm_fully_paid";
+        await appointment.save();
+
+        res.status(200).json({ success: true, message: "Full payment confirmed. Appointment is fully paid.", appointment });
+    } catch (err) {
+        console.error("Error confirming full payment:", err);
+        res.status(500).json({ message: "Server error" });
+    }
+};

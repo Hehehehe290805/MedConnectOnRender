@@ -3,7 +3,16 @@ import { upsertStreamUser } from "../lib/stream.js";
 
 // ✅ Define required fields per role
 const roleFieldMap = {
-    user: ["firstName", "lastName", "birthDate", "bio", "languages", "location"],
+    user: ["firstName", 
+        "lastName", 
+        "birthDate", 
+        "bio", 
+        "languages", 
+        "location", 
+        "gcash.qrData",
+        "gcash.accountName",
+        "gcash.accountNumber",
+    ],
     doctor: [
         "firstName",
         "lastName",

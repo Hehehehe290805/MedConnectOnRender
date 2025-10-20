@@ -1,4 +1,3 @@
-// src/app.js
 import express from "express";
 import "dotenv/config";
 import cookieParser from "cookie-parser";
@@ -12,7 +11,6 @@ import chatRoutes from "./routes/chat.route.js";
 import doctorScheduleRoutes from "./routes/doctorSchedule.route.js";
 import gcashSetupRoutes from "./routes/gcashSetup.route.js";
 import onboardingRoutes from "./routes/onboarding.route.js";
-import paymentRoutes from "./routes/payment.route.js";
 import pricingRoutes from "./routes/pricing.route.js";
 import searchRoutes from "./routes/search.route.js";
 import specialtyAndServiceRoutes from "./routes/specialtyAndService.route.js";
@@ -41,7 +39,6 @@ app.use("/api/chat", chatRoutes);
 app.use("/api/doctor-schedule", doctorScheduleRoutes);
 app.use("/api/gcash-setup", gcashSetupRoutes);
 app.use("/api/onboarding", onboardingRoutes);
-app.use("/api/payment", paymentRoutes);
 app.use("/api/pricing", pricingRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/specialties-and-services", specialtyAndServiceRoutes);

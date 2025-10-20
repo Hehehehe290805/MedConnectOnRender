@@ -1,15 +1,27 @@
 import express from "express";
 import { 
-    bookAppointment, cancelAppointment, getUserAppointments, submitReview
+    bookAppointment, payDeposit, cancelAppointment, payRemaining, completeAppointment,
+    getUserAppointments, submitReview, fileComplaint,
+    markAttendance, checkNoShows
 } from "../controllers/bookAppointmentService.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-// Set or update doctor availability
-router.post("/book", protectRoute, bookAppointment);
-router.post("/cancel", protectRoute, cancelAppointment);
+// Set Appointment
+router.post("/book", protectRoute, bookAppointment); //
+router.post("/pay-deposit", protectRoute, payDeposit); //
+router.post("/cancel", protectRoute, cancelAppointment); // 
 router.get("/user-appointments", protectRoute, getUserAppointments);
-router.post("/submit-review", protectRoute, submitReview);
+
+// During Appointment
+router.post("/attend", protectRoute, markAttendance); // 
+router.get("/check-attendance", protectRoute, checkNoShows); // 
+router.post("/complete-appointment", protectRoute, completeAppointment);
+
+// After Appointment
+router.post("/pay-remaining", protectRoute, payRemaining); //
+router.post("/submit-review", protectRoute, submitReview); //
+router.post("/report", protectRoute, fileComplaint); // 
 
 export default router;  

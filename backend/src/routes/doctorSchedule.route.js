@@ -2,7 +2,8 @@ import express from "express";
 import {
     setAvailability,
     getDoctorCalendar, getDoctorPublicCalendar,
-    confirmAppointment, completeAppointment
+    acceptAppointment, rejectAppointment, markComplete,
+    confirmDeposit, confirmFullPayment
 } from "../controllers/doctorSchedule.controller.js";       
 import { protectRoute } from "../middleware/auth.middleware.js";
 
@@ -16,7 +17,12 @@ router.get("/doctor-calendar", protectRoute, getDoctorCalendar);
 router.get("/public-doctor-calendar", getDoctorPublicCalendar);
 
 // Appointment actions
-router.post("/confirm", protectRoute, confirmAppointment);
-router.post("/complete", protectRoute, completeAppointment);
+router.post("/confirm", protectRoute, acceptAppointment); //
+router.post("/reject", protectRoute, rejectAppointment) // 
+router.post("/mark-complete", protectRoute, markComplete); //
+
+// Payment Confirmation
+router.post("/confirm-deposit", protectRoute, confirmDeposit); //
+router.post("/confirm-full-payment", protectRoute, confirmFullPayment); //
 
 export default router;

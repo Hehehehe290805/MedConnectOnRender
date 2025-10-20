@@ -4,6 +4,8 @@ import Specialty from "../models/Specialty.js";
 import Subspecialty from "../models/Subspecialty.js";
 import Service from "../models/Service.js";
 import User from "../models/User.js";
+import Report from "../models/Report.js";
+import Appointment_Service from "../models/Appointment_Service.js";
 
 // User Management
 export async function getPendingUsers(req, res) {
@@ -298,3 +300,67 @@ export async function approveClaim(req, res) {
     res.status(500).json({ message: "Internal Server Error" });
   }
 }
+
+// Reports
+export const viewAllComplaints = async (req, res) => {
+  try {
+    const complaints = await Report.find()
+      .sort({ createdAt: 1 }) // earliest first
+      .populate("appointmentId", "doctorId patientId start end status")
+      .populate("filedBy", "name email")
+      .populate("filedAgainst", "name email");
+
+    res.status(200).json({ success: true, complaints });
+  } catch (err) {
+    console.error("Error fetching all complaints:", err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+export const viewComplaintByComplaintId = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const complaint = await Report.findById(id)
+      .populate("appointmentId", "doctorId patientId start end status")
+      .populate("filedBy", "name email")
+      .populate("filedAgainst", "name email");
+
+    if (!complaint) return res.status(404).json({ message: "Complaint not found" });
+
+    res.status(200).json({ success: true, complaint });
+  } catch (err) {
+    console.error("Error fetching complaint:", err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+export const resolveComplaint = async (req, res) => {
+  try {
+    const { complaintId, outcome, adminNote } = req.body;
+    const adminId = req.user._id; // Assuming this is admin user
+
+    if (!outcome || !adminNote) {
+      return res.status(400).json({ message: "Outcome and admin note are required" });
+    }
+
+    const complaint = await Report.findById(complaintId);
+    if (!complaint) return res.status(404).json({ message: "Complaint not found" });
+
+    // Update the complaint
+    complaint.status = "resolved";
+    complaint.outcome = outcome;
+    complaint.adminNote = adminNote;
+    complaint.resolvedBy = adminId;
+    await complaint.save();
+
+    // Optional: Update appointment status if frozen
+    const appointment = await Appointment_Service.findById(complaint.appointmentId);
+    if (appointment && appointment.status === "freeze") {
+      appointment.status = "booked"; // Or another logic depending on outcome
+      await appointment.save();
+    }
+
+    res.status(200).json({ success: true, message: "Complaint resolved", complaint });
+  } catch (err) {
+    console.error("Error resolving complaint:", err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
