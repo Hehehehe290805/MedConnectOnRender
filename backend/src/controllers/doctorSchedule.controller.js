@@ -51,7 +51,26 @@ async function generateAvailableSlots(doctorId, daysAhead = 5) {
 
             const overlapping = await Appointment_Service.findOne({
                 doctorId,
-                status: { $in: ["booked", "confirmed", "cancelled", "completed"] },
+                status: {
+                    $in: [
+                        "pending_accept",
+                        "awaiting_deposit",
+                        "booked",                 // deposit paid
+                        "confirmed",              // deposit confirmed by doctor
+                        "ongoing",
+                        "completed",
+                        "fully_paid",             // waiting for remaining payment
+                        "confirm_fully_paid",     // full payment confirmed
+
+                        "cancelled_unpaid",
+                        "cancelled",
+                        "rejected",
+                        "no_show_patient",
+                        "no_show_doctor",
+                        "no_show_both",
+                        "freeze"
+                    ]
+                },
                 $or: [
                     { start: { $lt: slotEnd, $gte: slotStart } },
                     { end: { $gt: slotStart, $lte: slotEnd } },
@@ -80,7 +99,26 @@ export async function getDoctorCalendar(req, res) {
         const slots = await generateAvailableSlots(doctorId, Number(daysAhead));
         const appointments = await Appointment_Service.find({
             doctorId,
-            status: { $in: ["booked", "confirmed", "cancelled", "completed"] },
+            status: {
+                $in: [
+                    "pending_accept",
+                    "awaiting_deposit",
+                    "booked",                 // deposit paid
+                    "confirmed",              // deposit confirmed by doctor
+                    "ongoing",
+                    "completed",
+                    "fully_paid",             // waiting for remaining payment
+                    "confirm_fully_paid",     // full payment confirmed
+
+                    "cancelled_unpaid",
+                    "cancelled",
+                    "rejected",
+                    "no_show_patient",
+                    "no_show_doctor",
+                    "no_show_both",
+                    "freeze"
+                ]
+            },
             start: { $gte: new Date() },
         });
 

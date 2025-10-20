@@ -11,12 +11,13 @@ dayjs.extend(timezone);
 dayjs.tz.setDefault("Asia/Manila"); // Philippine Time UTC+8
 const toPhTime = (date) => dayjs(date).tz("Asia/Manila");
 
+// Appointments
 export const bookAppointment = async (req, res) => {
     try {
         const patientId = req.user._id;
-        const { doctorId, start, end, serviceId, method } = req.body;
+        const { doctorId, start, end, serviceId, virtual } = req.body;
 
-        if (!doctorId || !start || !end || !serviceId || !method) {
+        if (!doctorId || !start || !end || !serviceId || virtual) {
             return res.status(400).json({ message: "Missing required fields" });
         }
 
@@ -72,9 +73,9 @@ export const bookAppointment = async (req, res) => {
             doctorId,
             patientId,
             serviceId,
+            virtual,
             start: startDate,
             end: endDate,
-            method,
             amount,
             paymentDeposit: deposit,
             balanceAmount: amount - deposit,
@@ -387,22 +388,37 @@ export const checkNoShows = async () => {
 
     try {
         const appointments = await Appointment_Service.find({
-            start: { $lte: fiveMinutesAgo },
-            status: { $in: ["booked", "confirmed"] },
+            $or: [
+                // Appointments that started 5+ mins ago (for no-show check)
+                { start: { $lte: fiveMinutesAgo }, status: { $in: ["booked", "confirmed"] } },
+                // Appointments that ended (for auto-completion)
+                { end: { $lte: now }, status: { $in: ["ongoing"] } }
+            ]
         });
 
         for (const appointment of appointments) {
-            if (appointment.bothPresent || appointment.status === "ongoing" || appointment.status === "completed") continue;
-
-            if (!appointment.doctorPresent && !appointment.patientPresent) {
-                appointment.status = "no_show_both";
-            } else if (appointment.doctorPresent && !appointment.patientPresent) {
-                appointment.status = "no_show_patient";
-            } else if (!appointment.doctorPresent && appointment.patientPresent) {
-                appointment.status = "no_show_doctor";
+            // ✅ Auto-complete if both present and past end time
+            if (appointment.bothPresent && appointment.end <= now && appointment.status === "ongoing") {
+                appointment.status = "completed";
+                await appointment.save();
+                continue;
             }
 
-            await appointment.save();
+            // ❌ Skip if already marked as ongoing/completed or both present
+            if (appointment.bothPresent || appointment.status === "ongoing" || appointment.status === "completed") continue;
+
+            // 🕒 No-show logic for appointments that started 5+ mins ago
+            if (appointment.start <= fiveMinutesAgo && ["booked", "confirmed"].includes(appointment.status)) {
+                if (!appointment.doctorPresent && !appointment.patientPresent) {
+                    appointment.status = "no_show_both";
+                } else if (appointment.doctorPresent && !appointment.patientPresent) {
+                    appointment.status = "no_show_patient";
+                } else if (!appointment.doctorPresent && appointment.patientPresent) {
+                    appointment.status = "no_show_doctor";
+                }
+
+                await appointment.save();
+            }
         }
     } catch (err) {
         console.error("Error checking no-shows:", err);

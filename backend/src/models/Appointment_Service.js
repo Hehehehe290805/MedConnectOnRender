@@ -5,6 +5,7 @@ const Appointment_ServiceSchema = new mongoose.Schema({
   doctorId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   patientId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   serviceId: { type: mongoose.Schema.Types.ObjectId, ref: "Service" }, // optional for labs/institutes
+  virtual: { type: Boolean, default: true }, 
 
   // Schedule
   start: { type: Date, required: true },
@@ -36,7 +37,6 @@ const Appointment_ServiceSchema = new mongoose.Schema({
   },
 
   // Payment
-  method: { type: String, enum: ["gcash"], required: true },
   amount: { type: Number, required: true },      // total price at booking time
 
   // Deposit
