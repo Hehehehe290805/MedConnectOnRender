@@ -1,5 +1,5 @@
-import DoctorSchedule from "../models/DoctorSchedule.js";
-import Appointment_Service from "../models/Appointment_Service.js";
+import Schedule from "../models/Schedule.js";
+import Appointment_Service from "../models/Appointment.js";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
@@ -15,7 +15,7 @@ const nowPhTime = () => dayjs().tz("Asia/Manila");
 async function generateAvailableSlots(doctorId, daysAhead = 5) {
     if (!doctorId) return [];
 
-    const availability = await DoctorSchedule.findOne({ doctorId });
+    const availability = await Schedule.findOne({ doctorId });
     if (!availability || !availability.isActive) return [];
 
     const slotDuration = 30; // minutes
@@ -205,23 +205,97 @@ export async function getDoctorPublicCalendar(req, res) {
     }
 }
 
-// 🕒 Set availability (Private — uses req.user.id)
+export async function getInstitutePublicCalendar(req, res) {
+    try {
+        const { instituteId } = req.query;
+        if (!instituteId) return res.status(400).json({ message: "instituteId is required" });
+
+        const appointments = await Appointment_Service.find({
+            instituteId,
+            status: {
+                $in: [
+                    "pending_accept",
+                    "awaiting_deposit",
+                    "booked",                 // deposit paid
+                    "confirmed",              // deposit confirmed by doctor
+                    "ongoing",
+                    "completed",
+                    "fully_paid",             // waiting for remaining payment
+                    "confirm_fully_paid",     // full payment confirmed
+
+                    "cancelled_unpaid",
+                    "cancelled",
+                    "rejected",
+                    "no_show_patient",
+                    "no_show_doctor",
+                    "no_show_both",
+                    "freeze"
+                ]
+            },
+            start: { $gte: new Date() },
+        });
+
+        const events = appointments.map((a) => ({
+            start: toPhTime(a.start).format(),
+            end: toPhTime(a.end).format(),
+            title: a.status.charAt(0).toUpperCase() + a.status.slice(1),
+            type: "appointment",
+            phTime:
+                toPhTime(a.start).format("YYYY-MM-DD HH:mm") +
+                " to " +
+                toPhTime(a.end).format("HH:mm"),
+        }));
+
+        events.sort((a, b) => new Date(a.start) - new Date(b.start));
+
+        res.status(200).json({
+            success: true,
+            events,
+            timezone: "Asia/Manila (UTC+8)",
+        });
+    } catch (error) {
+        console.error("Error fetching institute public schedule:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+    
 export async function setAvailability(req, res) {
     try {
-        const doctorId = req.user.id;
+        const providerId = req.user.id; // Logged in user
+        const providerType = req.user.role; // Assuming role is either "doctor" or "institute"
         const { startHour, endHour, daysOfWeek, isActive } = req.body;
 
         if (!startHour || !endHour || !daysOfWeek) {
             return res.status(400).json({ message: "Missing required fields" });
         }
 
-        const availability = await DoctorSchedule.findOneAndUpdate(
-            { doctorId },
-            { startHour, endHour, daysOfWeek, isActive },
+        if (!["doctor", "institute"].includes(providerType)) {
+            return res.status(400).json({ message: "Invalid provider type" });
+        }
+
+        const query = providerType === "doctor"
+            ? { doctorId: providerId }
+            : { instituteId: providerId };
+
+        const update = {
+            startHour,
+            endHour,
+            daysOfWeek,
+            isActive
+        };
+
+        const availability = await Schedule.findOneAndUpdate(
+            query,
+            update,
             { upsert: true, new: true }
         );
 
-        res.status(200).json({ success: true, availability });
+        res.status(200).json({
+            success: true,
+            message: `${providerType} availability set successfully`,
+            availability
+        });
+
     } catch (error) {
         console.error("Error setting availability:", error);
         res.status(500).json({ message: "Internal server error" });

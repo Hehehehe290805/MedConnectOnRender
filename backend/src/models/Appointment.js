@@ -1,8 +1,9 @@
 import mongoose from "mongoose";
 
-const Appointment_ServiceSchema = new mongoose.Schema({
+const AppointmentSchema = new mongoose.Schema({
   // Appointment participants
-  doctorId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  doctorId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  instituteId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   patientId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   serviceId: { type: mongoose.Schema.Types.ObjectId, ref: "Service" }, // optional for labs/institutes
   virtual: { type: Boolean, default: true }, 
@@ -50,6 +51,7 @@ const Appointment_ServiceSchema = new mongoose.Schema({
   // Presence tracking
   patientPresent: { type: Boolean, default: false },
   doctorPresent: { type: Boolean, default: false },
+  institutePresent: { type: Boolean, default: false },
   bothPresent: { type: Boolean, default: false },
 
   // Rejection & cancellation
@@ -61,5 +63,5 @@ const Appointment_ServiceSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
-const Appointment_Service = mongoose.model("Appointment_Service", Appointment_ServiceSchema);
-export default Appointment_Service;
+const Appointment = mongoose.model("Appointment_Service", AppointmentSchema);
+export default Appointment;

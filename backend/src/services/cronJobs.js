@@ -1,5 +1,5 @@
 import cron from "node-cron";
-import { checkNoShows } from "../controllers/bookAppointmentService.controller.js";
+import { checkNoShows } from "../controllers/booking.controller.js";
 import { logError } from "../utils/logger.js";
 
 export function startCronJobs() {

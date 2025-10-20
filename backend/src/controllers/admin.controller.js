@@ -5,7 +5,7 @@ import Subspecialty from "../models/Subspecialty.js";
 import Service from "../models/Service.js";
 import User from "../models/User.js";
 import Report from "../models/Report.js";
-import Appointment_Service from "../models/Appointment_Service.js";
+import Appointment from "../models/Appointment.js";
 
 // User Management
 export async function getPendingUsers(req, res) {
@@ -352,7 +352,7 @@ export const resolveComplaint = async (req, res) => {
     await complaint.save();
 
     // Optional: Update appointment status if frozen
-    const appointment = await Appointment_Service.findById(complaint.appointmentId);
+    const appointment = await Appointment.findById(complaint.appointmentId);
     if (appointment && appointment.status === "freeze") {
       appointment.status = "booked"; // Or another logic depending on outcome
       await appointment.save();

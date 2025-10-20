@@ -3,7 +3,7 @@ import {
     bookAppointment, payDeposit, cancelAppointment, payRemaining, completeAppointment,
     getUserAppointments, submitReview, fileComplaint,
     markAttendance, checkNoShows
-} from "../controllers/bookAppointmentService.controller.js";
+} from "../controllers/booking.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 
 const router = express.Router();

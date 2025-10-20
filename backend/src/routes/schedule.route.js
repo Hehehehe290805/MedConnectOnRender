@@ -1,10 +1,10 @@
 import express from "express";
 import {
     setAvailability,
-    getDoctorCalendar, getDoctorPublicCalendar,
+    getDoctorCalendar, getDoctorPublicCalendar, getInstitutePublicCalendar,
     acceptAppointment, rejectAppointment, markComplete,
     confirmDeposit, confirmFullPayment
-} from "../controllers/doctorSchedule.controller.js";       
+} from "../controllers/schedule.controller.js";       
 import { protectRoute } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
@@ -14,7 +14,8 @@ router.post("/availability", protectRoute, setAvailability);
 
 // Get full calendar (available + booked)
 router.get("/doctor-calendar", protectRoute, getDoctorCalendar);
-router.get("/public-doctor-calendar", getDoctorPublicCalendar);
+router.get("/public-doctor-calendar", protectRoute, getDoctorPublicCalendar);
+router.get("/public-institute-calendar", protectRoute, getInstitutePublicCalendar);
 
 // Appointment actions
 router.post("/confirm", protectRoute, acceptAppointment); //
