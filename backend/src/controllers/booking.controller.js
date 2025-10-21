@@ -2,6 +2,7 @@ import Appointment from "../models/Appointment.js";
 import Pricing from "../models/Pricing.js";
 import Report from "../models/Report.js";
 import User from "../models/User.js";
+import Schedule from "../models/Schedule.js";
 
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
@@ -53,7 +54,7 @@ export const bookAppointment = async (req, res) => {
         const endTime = startTime.add(durationMinutes, "minute");
 
         // ✅ Check schedule (operating hours)
-        const schedule = await DoctorSchedule.findOne({
+        const schedule = await Schedule.findOne({
             $or: [{ doctorId }, { instituteId }],
         });
 

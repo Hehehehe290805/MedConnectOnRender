@@ -1,4 +1,5 @@
 import multer from "multer";
+import QrCode from "qrcode-reader";
 import QRCode from "qrcode";
 import { Jimp } from "jimp";
 import User from "../models/User.js";
@@ -25,8 +26,9 @@ export const upload = multer({
 // decode QR from memory buffer
 const decodeQR = async (buffer) => {
     const image = await Jimp.read(buffer);
+
     return new Promise((resolve, reject) => {
-        const qr = new QRCode();
+        const qr = new QrCode(); // ✅ correct constructor from "qrcode-reader"
         qr.callback = (err, value) => {
             if (err) return reject(err);
             resolve(value?.result || null);
