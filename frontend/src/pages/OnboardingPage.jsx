@@ -4,7 +4,7 @@ import { completeOnboarding } from "../lib/api.js";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { LoaderIcon, MapPinIcon, BriefcaseMedicalIcon, ShuffleIcon } from "lucide-react";
-import { LANGUAGES } from "../constants";
+import { LANGUAGES, SEX } from "../constants";
 import { CameraIcon } from "@heroicons/react/24/outline";
 
 const OnboardingPage = () => {
@@ -12,10 +12,11 @@ const OnboardingPage = () => {
     const queryClient = useQueryClient();
 
     const [formState, setFormState] = useState({
-    fullName: authUser?.fullName || "",
+    firstName: authUser?.firstName || "",
+    lastName: authUser?.lastName || "",
+    sex: authUser?.sex || "",
     bio: authUser?.bio || "",
     nativeLanguage: authUser?.nativeLanguage || "",
-    learningLanguage: authUser?.learningLanguage || "",
     location: authUser?.location || "",
     profilePic: authUser?.profilePic || "",
   });
@@ -28,7 +29,13 @@ const OnboardingPage = () => {
     },
 
     onError: (error) => {
-      toast.error(error.response.data.message);
+        console.error("Onboarding error:", error);
+        const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "An unexpected error occurred";
+        toast.error(message);
+        // toast.error(error.response.data.message);
     },
   });
 
@@ -79,20 +86,49 @@ const OnboardingPage = () => {
             </div>
 
             {/* FULL NAME */}
-            <div className="form-control">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="form-control">
               <label className="label">
-                <span className="label-text">Full Name</span>
+                <span className="label-text">First Name</span>
               </label>
               <input
                 type="text"
-                name="fullName"
-                value={formState.fullName}
-                onChange={(e) => setFormState({ ...formState, fullName: e.target.value })}
+                name="firstName"
+                value={formState.firstName}
+                onChange={(e) => setFormState({ ...formState, firstName: e.target.value })}
                 className="input input-bordered w-full"
-                placeholder="Your full name"
+                placeholder="Your first name"
               />
             </div>
 
+            <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Last Name</span>
+              </label>
+              <input
+                type="text"
+                name="lastName"
+                value={formState.lastName}
+                onChange={(e) => setFormState({ ...formState, lastName: e.target.value })}
+                className="input input-bordered w-full"
+                placeholder="Your last name"
+              />
+            </div>
+            </div>
+            
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Date of Birth</span>
+                </label>
+                <input
+                  type="date"
+                  name="birthDate"
+                  value={formState.birthDate}
+                  onChange={(e) => setFormState({ ...formState, birthDate: e.target.value })}
+                  className="input input-bordered w-full"
+                  placeholder="Your date of birth"
+                />  
+              </div>
             {/* BIO */}
             <div className="form-control">
               <label className="label">
@@ -112,7 +148,7 @@ const OnboardingPage = () => {
               {/* NATIVE LANGUAGE */}
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text">Native Language</span>
+                  <span className="label-text">Language</span>
                 </label>
                 <select
                   name="nativeLanguage"
@@ -120,7 +156,7 @@ const OnboardingPage = () => {
                   onChange={(e) => setFormState({ ...formState, nativeLanguage: e.target.value })}
                   className="select select-bordered w-full"
                 >
-                  <option value="">Select your native language</option>
+                  <option value="">Select your language</option>
                   {LANGUAGES.map((lang) => (
                     <option key={`native-${lang}`} value={lang.toLowerCase()}>
                       {lang}
@@ -129,20 +165,20 @@ const OnboardingPage = () => {
                 </select>
               </div>
 
-              {/* LEARNING LANGUAGE */}
+              {/* SEX */}
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text">Learning Language</span>
+                  <span className="label-text">Sex</span>
                 </label>
                 <select
-                  name="learningLanguage"
-                  value={formState.learningLanguage}
-                  onChange={(e) => setFormState({ ...formState, learningLanguage: e.target.value })}
+                  name="sex"
+                  value={formState.sex}
+                  onChange={(e) => setFormState({ ...formState, sex: e.target.value })}
                   className="select select-bordered w-full"
                 >
-                  <option value="">Select language you're learning</option>
-                  {LANGUAGES.map((lang) => (
-                    <option key={`learning-${lang}`} value={lang.toLowerCase()}>
+                  <option value="">Select your appropriate sex</option>
+                  {SEX.map((lang) => (
+                    <option key={`sex-${lang}`} value={lang.toLowerCase()}>
                       {lang}
                     </option>
                   ))}
