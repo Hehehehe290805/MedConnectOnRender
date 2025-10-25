@@ -26,7 +26,7 @@ const ProfilePage = () => {
       try {
         setQrLoading(true);
         setQrError(false);
-        const response = await fetch(`/api/gcash/qr/${authUser._id}`);
+        const response = await fetch("http://localhost:5001/api/gcash-setup/gcash/qr/" + authUser._id);
 
         if (response.ok) {
           const blob = await response.blob();
@@ -187,17 +187,6 @@ const ProfilePage = () => {
                     <CreditCardIcon className="w-6 h-6" />
                     GCash Payment Information
                   </h2>
-                  {authUser.gcash.isVerified ? (
-                    <div className="badge badge-success gap-2">
-                      <CheckCircleIcon className="w-4 h-4" />
-                      Verified
-                    </div>
-                  ) : (
-                    <div className="badge badge-warning gap-2">
-                      <XCircleIcon className="w-4 h-4" />
-                      Not Verified
-                    </div>
-                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

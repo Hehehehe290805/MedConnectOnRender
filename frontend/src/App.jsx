@@ -8,8 +8,8 @@ import CallPage from "./pages/CallPage.jsx";
 import ChatPage from "./pages/ChatPage.jsx";
 import ProfilePage from "./pages/ProfilePage.jsx";
 import SearchPage from "./pages/SearchPage.jsx";
-import SettingsPage from "./pages/SettingsPage.jsx";
-import UserBookingPage from "./pages/AppointmentsPage.jsx";
+//import SettingsPage from "./pages/SettingsPage.jsx";
+//import UserBookingPage from "./pages/AppointmentsPage.jsx";
 
 // Onboarding
 import OnboardingUser from "./pages/OnboardingUser.jsx";
@@ -25,6 +25,8 @@ import PageLoader from "./components/PageLoader.jsx";
 import useAuthUser from "./hooks/useAuthUser.js";
 import Layout from "./components/Layout.jsx";
 import { useThemeStore } from "./store/useThemeStore.js";
+import Appointment from "../../backend/src/models/Appointment.js";
+import { User } from "lucide-react";
 
 const App = () => {
   const { isLoading, authUser } = useAuthUser();
@@ -129,7 +131,7 @@ const App = () => {
             )
           }
         />
-        <Route
+        {/* <Route
           path="/settings"
           element={
             isAuthenticated ? (
@@ -140,19 +142,19 @@ const App = () => {
               <Navigate to={!isAuthenticated ? "/login" : "/onboarding"} />
             )
           }
-        />
-        <Route
+        /> */}
+        {/* <Route
           path="/appointments"
           element={
             isAuthenticated ? (
               <Layout showSidebar={true}>
-                <SettingsPage />
+                <UserBookingPage />
               </Layout>
             ) : (
               <Navigate to={!isAuthenticated ? "/login" : "/onboarding"} />
             )
           }
-        />
+        /> */}
         <Route path="/call/:id" element={
           isAuthenticated && isOnboarded ? (
             <CallPage />
