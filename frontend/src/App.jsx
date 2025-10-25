@@ -8,6 +8,9 @@ import CallPage from "./pages/CallPage.jsx";
 import ChatPage from "./pages/ChatPage.jsx";
 import ProfilePage from "./pages/ProfilePage.jsx";
 import SearchPage from "./pages/SearchPage.jsx";
+import SettingsPage from "./pages/SettingsPage.jsx";
+import UserBookingPage from "./pages/AppointmentsPage.jsx";
+
 // Onboarding
 import OnboardingUser from "./pages/OnboardingUser.jsx";
 import OnboardingDoctor from "./pages/OnboardingDoctor.jsx";
@@ -120,6 +123,30 @@ const App = () => {
             isAuthenticated ? (
               <Layout showSidebar={true}>
                 <SearchPage />
+              </Layout>
+            ) : (
+              <Navigate to={!isAuthenticated ? "/login" : "/onboarding"} />
+            )
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            isAuthenticated ? (
+              <Layout showSidebar={true}>
+                <SettingsPage />
+              </Layout>
+            ) : (
+              <Navigate to={!isAuthenticated ? "/login" : "/onboarding"} />
+            )
+          }
+        />
+        <Route
+          path="/appointments"
+          element={
+            isAuthenticated ? (
+              <Layout showSidebar={true}>
+                <SettingsPage />
               </Layout>
             ) : (
               <Navigate to={!isAuthenticated ? "/login" : "/onboarding"} />
