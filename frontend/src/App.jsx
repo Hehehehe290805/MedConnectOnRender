@@ -6,7 +6,14 @@ import LoginPage from "./pages/LoginPage.jsx";
 import NotificationsPage from "./pages/NotificationsPage.jsx";
 import CallPage from "./pages/CallPage.jsx";
 import ChatPage from "./pages/ChatPage.jsx";
-import OnboardingPage from "./pages/OnboardingPage.jsx";
+
+// Onboarding
+import OnboardingUser from "./pages/OnboardingUser.jsx";
+import OnboardingDoctor from "./pages/OnboardingDoctor.jsx";
+import OnboardingInstitute from "./pages/OnboardingInstitute.jsx";
+import OnboardingAdmin from "./pages/OnboardingAdmin.jsx";
+
+import Pending from "./pages/Pending.jsx";
 
 import { Toaster } from "react-hot-toast";
 
@@ -20,20 +27,56 @@ const App = () => {
   const { theme } = useThemeStore();
 
   const isAuthenticated = Boolean(authUser)
-    const isOnboarded = authUser?.status === "onBoarded";
-
+  const isOnboarded = authUser?.status === "onBoarded";
+  const isPending = authUser?.status === "pending";
+  const userRole = authUser?.role;
 
   if (isLoading) return <PageLoader />;
 
+  const getOnboardingComponent = () => {
+    switch (userRole) {
+      case "doctor":
+        return <OnboardingDoctor />;
+      case "institute":
+        return <OnboardingInstitute />;
+      case "admin":
+        return <OnboardingAdmin />;
+      case "user":
+      default:
+        return <OnboardingUser />;
+    }
+  };
+
   return <div className="min-h-screen" data-theme={theme}>
       <Routes>
-        <Route path="/" element={isAuthenticated && isOnboarded ? (
-          <Layout showSidebar={true}>
-            <HomePage />
-          </Layout>
-        ) : (
-          <Navigate to={isAuthenticated ? "/onboarding" : "/login"} />
-        )} />
+        <Route
+          path="/"
+          element={
+            isAuthenticated ? (
+              isPending ? (
+                <Navigate to="/pending" />
+              ) : isOnboarded ? (
+                <Layout showSidebar={true}>
+                  <HomePage />
+                </Layout>
+              ) : (
+                <Navigate to="/onboarding" />
+              )
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+        <Route
+          path="/pending"
+          element={
+            isAuthenticated && isPending ? (
+              <Pending />
+            ) : (
+              <Navigate to={isAuthenticated ? "/" : "/login"} />
+            )
+          }
+        />
         <Route 
           path="/signup" 
           element={
@@ -81,8 +124,10 @@ const App = () => {
           path="/onboarding"
           element={
             isAuthenticated ? (
-              !isOnboarded ? (
-                <OnboardingPage />
+              isPending ? (
+                <Navigate to="/pending" />
+              ) : !isOnboarded ? (
+                getOnboardingComponent()
               ) : (
                 <Navigate to="/" />
               )
@@ -91,6 +136,7 @@ const App = () => {
             )
           }
         />
+        
       </Routes>
 
     < Toaster />
