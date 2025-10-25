@@ -5,7 +5,7 @@ import { upsertStreamUser } from "../lib/stream.js";
 // ✅ Signup
 export const signup = async (req, res) => {
   try {
-    const { email, password, firstName, lastName, role } = req.body;
+    const { email, password, role } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ message: "Email and password are required." });
@@ -20,9 +20,8 @@ export const signup = async (req, res) => {
     const user = new User({
       email,
       password,
-      firstName,
-      lastName,
       role,
+      isOnboarded: "notOnBoarded",
     });
 
     await user.save();
@@ -150,53 +149,3 @@ export const deleteMe = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
-
-export async function onboard(req, res) {
-  try {
-    const userId = req.user._id;
-    const { firstName, nativeLanguage, sex, location, bio, birthDate } = req.body;
-
-    if (!firstName || !sex || !nativeLanguage || !birthDate || !location || !bio) {
-      return res.status(400).json({
-        message: "All fields are required",
-        missingFields: [
-          !firstName && "firstName",
-          !nativeLanguage && "nativeLanguage",
-          !birthDate && "birthDate",
-          !sex && "sex",
-          !location && "location",
-          !bio && "bio",
-        ].filter(Boolean),
-      });
-    }
-
-    const fullName = `${firstName} ${req.user.lastName || ""}`.trim();
-
-    const updatedUser = await User.findByIdAndUpdate(userId, {
-      ...req.body,
-      fullName,
-      isOnboarded: true,
-    }, { new: true });
-
-    if(!updatedUser) return res.status(404).json({ message: "User not found" });
-    try {
-      await upsertStreamUser({
-        id: updatedUser._id.toString(),
-        name: updatedUser.fullName,
-        image: updatedUser.profilePic || "",
-      });
-      console.log(`Stream user updated after onboarding for ${updatedUser.fullName}`);
-    } catch (streamError) {
-      console.log("Error updating Stream user during onboarding:", streamError.message);
-    }
-
-    res.status(200).json({ success: true, user: updatedUser });
-
-  } catch (error) {
-    console.error("Error in onboarding controller:", error);
-    res.status(500).json({ message: "Internal Server Error" }
-    );
-  }
-
-};
-

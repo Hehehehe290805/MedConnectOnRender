@@ -20,7 +20,7 @@ const App = () => {
   const { theme } = useThemeStore();
 
   const isAuthenticated = Boolean(authUser)
-  const isOnboarded = authUser?.isOnboarded;
+    const isOnboarded = authUser?.status === "onBoarded";
 
 
   if (isLoading) return <PageLoader />;

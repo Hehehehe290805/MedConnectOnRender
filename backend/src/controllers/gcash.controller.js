@@ -40,19 +40,20 @@ const decodeQR = async (buffer) => {
 // 📥 Upload & extract GCash QR
 export const uploadGCashQR = async (req, res) => {
     try {
-        const userId = req.user.id;
+        const userId = req.user?.id;
 
         if (!req.file) {
             return res.status(400).json({ message: "No file uploaded" });
         }
 
-        // 1. Decode QR from the uploaded buffer
         const qrData = await decodeQR(req.file.buffer);
+
         if (!qrData) {
             return res.status(400).json({ message: "Invalid QR code." });
         }
 
         const { accountName, accountNumber } = req.body;
+
         if (!accountName || !accountNumber) {
             return res.status(400).json({ message: "Account name and number are required." });
         }
@@ -64,7 +65,6 @@ export const uploadGCashQR = async (req, res) => {
                     "gcash.qrData": qrData,
                     "gcash.accountName": accountName,
                     "gcash.accountNumber": accountNumber,
-                    "gcash.isVerified": false,
                 },
             },
             { new: true }
@@ -74,8 +74,10 @@ export const uploadGCashQR = async (req, res) => {
             message: "GCash QR uploaded successfully.",
             gcash: user.gcash,
         });
+
     } catch (error) {
-        console.error("GCash upload error:", error);
+        console.error("10. GCash upload error:", error);
+        // Make sure to return JSON even for errors
         res.status(500).json({ message: "Server error uploading GCash QR." });
     }
 };

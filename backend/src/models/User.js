@@ -23,6 +23,10 @@ const userSchema = new mongoose.Schema(
     birthDate: {
       type: Date,
     },
+    sex: {
+      type: String,
+      enum: ["male", "female"],
+    },
     bio: {
       type: String,
       default: "",
@@ -34,7 +38,6 @@ const userSchema = new mongoose.Schema(
     languages: [
       {
         type: String,
-        enum: ["English", "Tagalog"],
         required: true,
       },
     ],

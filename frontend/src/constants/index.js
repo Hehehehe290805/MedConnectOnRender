@@ -165,26 +165,21 @@ export const THEMES = [
 export const LANGUAGES = [
   "English",
   "Tagalog",
+  "Cebuano",
+  "Ilocano",
+  "Hiligaynon",
+  "Bicolano",
+  "Waray",
+  "Kapampangan",
+  "Pangasinan",
+  "Maranao",
+  "Maguindanao",
+  "Tausug",
+  "Chavacano"
 ];
+
 
 export const SEX = [
   "Male",
   "Female",
 ];
-
-export const LANGUAGE_TO_FLAG = {
-  english: "gb",
-  spanish: "es",
-  french: "fr",
-  german: "de",
-  mandarin: "cn",
-  japanese: "jp",
-  korean: "kr",
-  hindi: "in",
-  russian: "ru",
-  portuguese: "pt",
-  arabic: "sa",
-  italian: "it",
-  turkish: "tr",
-  dutch: "nl",
-};
