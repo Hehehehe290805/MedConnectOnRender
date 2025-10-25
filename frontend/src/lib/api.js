@@ -31,9 +31,19 @@ export const getAuthUser = async () => {
 
 // USER ONBOARDING
 export const completeOnboarding = async (userData) => {
+  let response;
   switch (userData.role) {
     case ("user"):
-      const response = await axiosInstance.post("/onboarding/onboarding", userData);
+      response = await axiosInstance.post("/onboarding/onboarding", userData);
+      return response.data;
+    case ("doctor"):
+      response = await axiosInstance.post("/onboarding/onboarding/doctor", userData);
+      return response.data;
+    case ("institute"):
+      response = await axiosInstance.post("/onboarding/onboarding/institute", userData);
+      return response.data;
+    case ("admin"): 
+      response = await axiosInstance.post("/onboarding/onboarding/admin", userData);
       return response.data;
   }
 };

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import useAuthUser from "../hooks/useAuthUser";
+import useAuthUser from "../hooks/useAuthUser.js";
 import { completeOnboarding, uploadGCashQR } from "../lib/api.js";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
@@ -9,7 +9,7 @@ import {
   BriefcaseMedicalIcon,
   ShuffleIcon,
 } from "lucide-react";
-import { LANGUAGES } from "../constants";
+import { LANGUAGES } from "../constants/index.js";
 import { CameraIcon } from "@heroicons/react/24/outline";
 
 const OnboardingPage = () => {
