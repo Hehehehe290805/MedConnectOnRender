@@ -7,6 +7,8 @@ import NotificationsPage from "./pages/NotificationsPage.jsx";
 import CallPage from "./pages/CallPage.jsx";
 import ChatPage from "./pages/ChatPage.jsx";
 import OnboardingPage from "./pages/OnboardingPage.jsx";
+import ProfilePage from "./pages/ProfilePage.jsx";
+import SearchPage from "./pages/SearchPage.jsx";
 
 import { Toaster } from "react-hot-toast";
 
@@ -58,14 +60,37 @@ const App = () => {
             )
           }
         />
+        <Route
+          path="/profile"
+          element={
+            isAuthenticated ? (
+              <Layout showSidebar={true}>
+                <ProfilePage />
+              </Layout>
+            ) : (
+              <Navigate to={!isAuthenticated ? "/login" : "/onboarding"} />
+            )
+          }
+        />
+        <Route
+          path="/search"
+          element={
+            isAuthenticated ? (
+              <Layout showSidebar={true}>
+                <SearchPage />
+              </Layout>
+            ) : (
+              <Navigate to={!isAuthenticated ? "/login" : "/onboarding"} />
+            )
+          }
+        />
         <Route path="/call/:id" element={
           isAuthenticated && isOnboarded ? (
             <CallPage />
           ) : (
             <Navigate to={!isAuthenticated ? "/login" : "/onboarding"} />
             )
-          } />
-          
+          } />     
         <Route 
           path="/chat/:id" 
           element={
@@ -92,6 +117,7 @@ const App = () => {
           }
         />
       </Routes>
+      
 
     < Toaster />
     </div>;
