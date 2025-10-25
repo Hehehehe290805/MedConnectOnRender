@@ -10,10 +10,15 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   AlertCircleIcon,
+  ArrowLeftIcon,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
 
 const ProfilePage = () => {
   const { authUser } = useAuthUser();
+  const navigate = useNavigate();
+
   const [qrImageUrl, setQrImageUrl] = useState(null);
   const [qrLoading, setQrLoading] = useState(false);
   const [qrError, setQrError] = useState(false);
@@ -79,6 +84,15 @@ const ProfilePage = () => {
   return (
     <div className="min-h-screen bg-base-100 p-4 py-8">
       <div className="max-w-4xl mx-auto space-y-6">
+        {/* 🔙 BACK BUTTON */}
+        <button
+          onClick={() => navigate("/")}
+          className="flex items-center gap-2 text-primary font-semibold hover:underline mb-4"
+        >
+          <ArrowLeftIcon className="w-5 h-5" />
+          Back to Home
+        </button>
+        
         {/* HEADER CARD - Profile Picture & Name */}
         <div className="card bg-base-200 shadow-xl">
           <div className="card-body items-center text-center p-8">
