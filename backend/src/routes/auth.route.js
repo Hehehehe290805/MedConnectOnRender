@@ -11,7 +11,7 @@ router.post("/login", login);
 router.post("/logout", logout);
 
 // router.get("/get-me", protectRoute, getMe)
-// router.delete("/delete-me", protectRoute, deleteMe)
+router.delete("/delete-me", protectRoute, deleteMe)
 
 router.get("/me", protectRoute, (req, res) => {
   res.status(200).json({ success: true, user: req.user });

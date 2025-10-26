@@ -1,3 +1,7 @@
+import { useEffect, useState } from "react";
+import { SearchIcon, AlertCircleIcon } from "lucide-react";
+import FriendCard from "../components/FriendCard.jsx"; 
+
 const SearchPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);

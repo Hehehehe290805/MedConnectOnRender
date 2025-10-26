@@ -186,27 +186,44 @@ export async function getUsers(req, res) {
     res.status(500).json({ message: "Internal Server Error" });
   }
 }
+
+// export async function getDoctors(req, res) {
+//   try {
+//     const doctors = await User.find({
+//       status: "onBoarded",
+//       role: "doctor",
+//     }).select("firstName lastName profession birthDate");
+
+//     const formatted = doctors.map(user => ({
+//       _id: user._id,
+//       firstName: user.firstName,
+//       lastName: user.lastName,
+//       profession: user.profession,
+//       birthDate: user.birthDate ? user.birthDate.toISOString().split("T")[0] : null,
+//     }));
+
+//     res.status(200).json({ success: true, users: formatted });
+//   } catch (error) {
+//     console.error("Error fetching doctors:", error);
+//     res.status(500).json({ message: "Internal Server Error" });
+//   }
+// }
+
 export async function getDoctors(req, res) {
   try {
     const doctors = await User.find({
       status: "onBoarded",
       role: "doctor",
-    }).select("firstName lastName profession birthDate");
+    }).select("-password -licenseNumber -gcash.accountNumber"); // Don't expose sensitive data
 
-    const formatted = doctors.map(user => ({
-      _id: user._id,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      profession: user.profession,
-      birthDate: user.birthDate ? user.birthDate.toISOString().split("T")[0] : null,
-    }));
-
-    res.status(200).json({ success: true, users: formatted });
+    // Return data key to match frontend expectation
+    res.status(200).json({ data: doctors });
   } catch (error) {
     console.error("Error fetching doctors:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 }
+
 export async function getPharmacies(req, res) {
   try {
     const pharmacies = await User.find({
@@ -229,25 +246,59 @@ export async function getPharmacies(req, res) {
     res.status(500).json({ message: "Internal Server Error" });
   }
 }
+// export async function getInstitutes(req, res) {
+//   try {
+//     const institutes = await User.find({
+//       status: "onBoarded",
+//       role: "institute",
+//     }).select("firstName lastName profession birthDate facilityName");
+
+//     const formatted = institutes.map(user => ({
+//       _id: user._id,
+//       firstName: user.firstName,
+//       lastName: user.lastName,
+//       profession: user.profession,
+//       birthDate: user.birthDate ? user.birthDate.toISOString().split("T")[0] : null,
+//       facilityName: user.facilityName,
+//     }));
+
+//     res.status(200).json({ success: true, users: formatted });
+//   } catch (error) {
+//     console.error("Error fetching institutes:", error);
+//     res.status(500).json({ message: "Internal Server Error" });
+//   }
+// }
+
 export async function getInstitutes(req, res) {
   try {
     const institutes = await User.find({
       status: "onBoarded",
       role: "institute",
-    }).select("firstName lastName profession birthDate facilityName");
+    }).select("-password -licenseNumber -gcash.accountNumber"); // Don't expose sensitive data
 
-    const formatted = institutes.map(user => ({
-      _id: user._id,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      profession: user.profession,
-      birthDate: user.birthDate ? user.birthDate.toISOString().split("T")[0] : null,
-      facilityName: user.facilityName,
-    }));
-
-    res.status(200).json({ success: true, users: formatted });
+    // Return data key to match frontend expectation
+    res.status(200).json({ data: institutes });
   } catch (error) {
     console.error("Error fetching institutes:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+export async function getUserById(req, res) {
+  try {
+    const { userId } = req.params;
+    
+    const user = await User.findById(userId)
+      .select("-password -licenseNumber") // Don't expose sensitive data
+      .lean();
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({ data: user });
+  } catch (error) {
+    console.error("Error fetching user:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 }

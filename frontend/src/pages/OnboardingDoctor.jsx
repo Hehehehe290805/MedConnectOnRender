@@ -8,6 +8,8 @@ import {
     MapPinIcon,
     BriefcaseMedicalIcon,
     ShuffleIcon,
+    BriefcaseBusinessIcon,
+    IdCardLanyardIcon,
 } from "lucide-react";
 import { LANGUAGES } from "../constants/index.js";
 import { CameraIcon } from "@heroicons/react/24/outline";
@@ -313,6 +315,7 @@ const OnboardingPage = () => {
                                 <span className="label-text">Profession</span>
                             </label>
                             <div className="relative">
+                                <BriefcaseBusinessIcon className="absolute top-1/2 transform -translate-y-1/2 left-3 size-5 text-base-content opacity-70" />
                                 <input
                                     type="text"
                                     value={formState.profession}
@@ -332,6 +335,7 @@ const OnboardingPage = () => {
                                 <span className="label-text">License Number</span>
                             </label>
                             <div className="relative">
+                                <IdCardLanyardIcon className="absolute top-1/2 transform -translate-y-1/2 left-3 size-5 text-base-content opacity-70" />    
                                 <input
                                     type="text"
                                     value={formState.licenseNumber}

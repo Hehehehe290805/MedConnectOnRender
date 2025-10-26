@@ -30,6 +30,7 @@ import Layout from "./components/Layout.jsx";
 import { useThemeStore } from "./store/useThemeStore.js";
 import Appointment from "../../backend/src/models/Appointment.js";
 import { User } from "lucide-react";
+import OtherPage from "./pages/OtherProfilePage.jsx";
 
 const App = () => {
   const { isLoading, authUser } = useAuthUser();
@@ -173,6 +174,17 @@ const App = () => {
             isAuthenticated && isOnboarded ? (
               <Layout showSidebar={false}>
                 <ChatPage />
+              </Layout>
+            ) : (
+              <Navigate to={!isAuthenticated ? "/login" : "/onboarding"} />
+            )
+          } />
+          <Route 
+          path="/profile/:id" 
+          element={
+            isAuthenticated && isOnboarded ? (
+              <Layout showSidebar={true}>
+                <OtherPage />
               </Layout>
             ) : (
               <Navigate to={!isAuthenticated ? "/login" : "/onboarding"} />

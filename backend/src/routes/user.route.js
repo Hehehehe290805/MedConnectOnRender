@@ -7,7 +7,7 @@ import {
     acceptFriendRequest,
     getFriendRequests,
     getOutgoingFriendRequests,
-    getUsers, getDoctors, getPharmacies, getInstitutes
+    getUsers, getDoctors, getPharmacies, getInstitutes, getUserById
 } from "../controllers/user.controller.js";
 
 const router = express.Router();
@@ -16,17 +16,17 @@ const router = express.Router();
 router.use(protectRoute);
 
 router.get("/", getRecommendedUsers);
-router.get("/friends", getMyFriends); // 7th portion; TEN DAYS REMAINING
-
+router.get("/friends", getMyFriends);
 router.post("/friend-request/:id", sendFriendRequest);
 router.put("/friend-request/:id/accept", acceptFriendRequest);
-
 router.get("/friend-requests", getFriendRequests);
 router.get("/outgoing-friend-requests", getOutgoingFriendRequests);
 
-// Get users, doctors, institutes
-router.get("/users", protectRoute, getUsers);
-router.get("/doctors", protectRoute, getDoctors);
-router.get("/institutes", protectRoute, getInstitutes);
+// get all users, doctors, pharmacies, institutes
+router.get("/users", getUsers);
+router.get("/doctors", getDoctors);
+router.get("/institutes", getInstitutes);
+
+router.get("/:userId", getUserById);
 
 export default router;
