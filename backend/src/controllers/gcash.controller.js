@@ -94,6 +94,8 @@ export const getGCashInfo = async (req, res) => {
 };
 
 export const getGCashQR = async (req, res) => {
+    console.log("✅ getGCashQR reached:", req.params.userId);
+
     try {
         const { userId } = req.params; // Get the target user ID from URL params
 
@@ -104,8 +106,7 @@ export const getGCashQR = async (req, res) => {
             return res.status(404).json({ message: "User not found" });
         }
 
-        // Check if user is a professional who should have GCash
-        const allowedRoles = ["doctor", "pharmacist", "institute"];
+        const allowedRoles = ["user", "doctor", "pharmacist", "institute"];
         if (!allowedRoles.includes(user.role)) {
             return res.status(403).json({ message: "This user doesn't have a GCash QR" });
         }
@@ -115,9 +116,11 @@ export const getGCashQR = async (req, res) => {
         }
 
         const qrString = user.gcash.qrData;
+        console.log("QR data string:", qrString?.slice(0, 50)); 
 
         // Generate QR code image from the stored string
         const dataUrl = await QRCode.toDataURL(qrString);
+        console.log("QR code successfully generated");
 
         // Extract base64 part
         const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");

@@ -1,6 +1,11 @@
 import { Navigate, Route, Routes } from "react-router";
 
-import HomePage from "./pages/HomePage.jsx";
+// Home Page
+import HomePageUser from "./pages/HomePageUser.jsx";
+import HomePageDoctor from "./pages/HomePageDoctor.jsx";
+import HomePageInstitute from "./pages/HomePageInstitute.jsx";
+import HomePageAdmin from "./pages/HomePageAdmin.jsx";
+
 import SignUpPage from "./pages/SignUpPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import NotificationsPage from "./pages/NotificationsPage.jsx";
@@ -23,6 +28,8 @@ import PageLoader from "./components/PageLoader.jsx";
 import useAuthUser from "./hooks/useAuthUser.js";
 import Layout from "./components/Layout.jsx";
 import { useThemeStore } from "./store/useThemeStore.js";
+import Appointment from "../../backend/src/models/Appointment.js";
+import { User } from "lucide-react";
 
 const App = () => {
   const { isLoading, authUser } = useAuthUser();
@@ -49,6 +56,20 @@ const App = () => {
     }
   };
 
+  const getHomePageComponent = () => {
+    switch (userRole) {
+      case "doctor":
+        return <HomePageDoctor />;
+      case "institute":
+        return <HomePageInstitute />;
+      case "admin":
+        return <HomePageAdmin />;
+      case "user":
+      default:
+        return <HomePageUser />;
+    }
+  };
+
   return <div className="min-h-screen" data-theme={theme}>
       <Routes>
         <Route
@@ -59,7 +80,7 @@ const App = () => {
                 <Navigate to="/pending" />
               ) : isOnboarded ? (
                 <Layout showSidebar={true}>
-                  <HomePage />
+                {getHomePageComponent()}
                 </Layout>
               ) : (
                 <Navigate to="/onboarding" />

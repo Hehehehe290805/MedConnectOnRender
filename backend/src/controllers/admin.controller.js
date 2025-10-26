@@ -11,7 +11,7 @@ import Appointment from "../models/Appointment.js";
 export async function getPendingUsers(req, res) {
   try {
     const pendingUsers = await User.find({ status: "pending" }).select(
-      "_id firstName lastName profession birthDate licenseNumber facilityName adminCode role"
+      "_id firstName lastName profession birthDate licenseNumber facilityName adminCode role location"
     );
 
     // Format users with role-specific information
@@ -31,14 +31,9 @@ export async function getPendingUsers(req, res) {
           if (user.licenseNumber) userObj.licenseNumber = user.licenseNumber;
           break;
           
-        case "pharmacist":
-          if (user.birthDate) userObj.birthDate = user.birthDate.toISOString().split("T")[0];
-          if (user.licenseNumber) userObj.licenseNumber = user.licenseNumber;
-          userObj.profession = "Pharmacist"; // Always show for pharmacists
-          break;
-          
         case "institute":
           if (user.facilityName) userObj.facilityName = user.facilityName;
+          if (user.location) userObj.location = user.location;
           break;
           
         case "admin":

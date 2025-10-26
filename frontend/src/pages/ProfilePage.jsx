@@ -10,10 +10,15 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   AlertCircleIcon,
+  ArrowLeftIcon,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
 
 const ProfilePage = () => {
   const { authUser } = useAuthUser();
+  const navigate = useNavigate();
+
   const [qrImageUrl, setQrImageUrl] = useState(null);
   const [qrLoading, setQrLoading] = useState(false);
   const [qrError, setQrError] = useState(false);
@@ -26,7 +31,7 @@ const ProfilePage = () => {
       try {
         setQrLoading(true);
         setQrError(false);
-        const response = await fetch(`/api/gcash/qr/${authUser._id}`);
+        const response = await fetch("http://localhost:5001/api/gcash-setup/gcash/qr/" + authUser._id);
 
         if (response.ok) {
           const blob = await response.blob();
@@ -79,6 +84,15 @@ const ProfilePage = () => {
   return (
     <div className="min-h-screen bg-base-100 p-4 py-8">
       <div className="max-w-4xl mx-auto space-y-6">
+        {/* 🔙 BACK BUTTON */}
+        <button
+          onClick={() => navigate("/")}
+          className="flex items-center gap-2 text-primary font-semibold hover:underline mb-4"
+        >
+          <ArrowLeftIcon className="w-5 h-5" />
+          Back to Home
+        </button>
+        
         {/* HEADER CARD - Profile Picture & Name */}
         <div className="card bg-base-200 shadow-xl">
           <div className="card-body items-center text-center p-8">
@@ -187,17 +201,6 @@ const ProfilePage = () => {
                     <CreditCardIcon className="w-6 h-6" />
                     GCash Payment Information
                   </h2>
-                  {authUser.gcash.isVerified ? (
-                    <div className="badge badge-success gap-2">
-                      <CheckCircleIcon className="w-4 h-4" />
-                      Verified
-                    </div>
-                  ) : (
-                    <div className="badge badge-warning gap-2">
-                      <XCircleIcon className="w-4 h-4" />
-                      Not Verified
-                    </div>
-                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
