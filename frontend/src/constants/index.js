@@ -162,6 +162,21 @@ export const THEMES = [
   },
 ];
 
+export const FILTER_ROLES = ["Doctor", "Institute"];
+
+export const FILTER_GENDERS = ["Male", "Female"];
+
+export const FILTER_LOCATIONS = [
+  "Manila",
+  "Cebu",
+  "Davao",
+  "Quezon City",
+  "Makati",
+  "Pasig",
+  "Taguig",
+  "Caloocan",
+];
+
 export const LANGUAGES = [
   "English",
   "Tagalog",
