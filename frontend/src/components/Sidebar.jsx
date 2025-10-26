@@ -8,7 +8,11 @@ const Sidebar = () => {
   const currentPath = location.pathname;
 
   // Generate full name from first and last name
-  const fullName = `${authUser?.firstName || ''} ${authUser?.lastName || ''}`.trim() || 'User';
+  const fullName = `${authUser?.firstName || ""} ${authUser?.lastName || ""}`.trim() || "User";
+
+  // Define which navigation items each role can see
+  const canAccessSearch = authUser?.role === "user";
+  const canAccessNotifications = authUser?.role === "user";
 
   return (
     <aside className="w-64 bg-base-200 border-r border-base-300 hidden lg:flex flex-col h-screen sticky top-0">
@@ -22,32 +26,44 @@ const Sidebar = () => {
       </div>
 
       <nav className="flex-1 p-4 space-y-1">
+        {/* Home - All roles */}
         <Link
           to="/"
-          className={`btn btn-ghost justify-start w-full gap-3 px-3 normal-case ${currentPath === "/" ? "btn-active" : ""
-            }`}
+          className={`btn btn-ghost justify-start w-full gap-3 px-3 normal-case ${
+            currentPath === "/" ? "btn-active" : ""
+          }`}
         >
           <HomeIcon className="size-5 text-base-content opacity-70" />
           <span>Home</span>
         </Link>
 
-        <Link
-          to="/search"
-          className={`btn btn-ghost justify-start w-full gap-3 px-3 normal-case ${currentPath === "/search" ? "btn-active" : "" // Fixed: was checking for /friends
+        {/* Search - Only users */}
+        {canAccessSearch && (
+          <Link
+            to="/search"
+            className={`btn btn-ghost justify-start w-full gap-3 px-3 normal-case ${
+              currentPath === "/search" ? "btn-active" : ""
             }`}
-        >
-          <SearchIcon className="size-5 text-base-content opacity-70" />
-          <span>Search</span>
-        </Link>
+          >
+            <SearchIcon className="size-5 text-base-content opacity-70" />
+            <span>Search</span>
+          </Link>
+        )}
 
-        <Link
-          to="/notifications"
-          className={`btn btn-ghost justify-start w-full gap-3 px-3 normal-case ${currentPath === "/notifications" ? "btn-active" : ""
+        {/* Notifications - Only users */}
+        {canAccessNotifications && (
+          <Link
+            to="/notifications"
+            className={`btn btn-ghost justify-start w-full gap-3 px-3 normal-case ${
+              currentPath === "/notifications" ? "btn-active" : ""
             }`}
-        >
-          <BellIcon className="size-5 text-base-content opacity-70" />
-          <span>Notifications</span>
-        </Link>
+          >
+            <BellIcon className="size-5 text-base-content opacity-70" />
+            <span>Notifications</span>
+          </Link>
+        )}
+
+        {/* Settings - All roles */}
         <Link
           to="/settings"
           className={`btn btn-ghost justify-start w-full gap-3 px-3 normal-case ${
@@ -60,7 +76,10 @@ const Sidebar = () => {
       </nav>
 
       {/* USER PROFILE SECTION */}
-      <Link to={"/profile"} className="btn btn-ghost w-full justify-start normal-case h-auto min-h-0 p-0 hover:bg-base-200">
+      <Link
+        to={"/profile"}
+        className="btn btn-ghost w-full justify-start normal-case h-auto min-h-0 p-0 hover:bg-base-200"
+      >
         <div className="p-4 border-t border-base-300 w-full">
           <div className="flex items-center gap-3">
             <div className="avatar">

@@ -50,89 +50,88 @@ const SearchPage = () => {
     }
   };
 
-  // Apply all filters
+  // Filtering logic
   const filteredResults = results.filter((item) => {
-    // Search query filter
-    const search = query.toLowerCase();
-    const matchesSearch =
-      !query ||
-      item.firstName?.toLowerCase().includes(search) ||
-      item.lastName?.toLowerCase().includes(search) ||
-      item.facilityName?.toLowerCase().includes(search) ||
-      item.role?.toLowerCase().includes(search) ||
-      item.location?.toLowerCase().includes(search) ||
-      item.profession?.toLowerCase().includes(search);
+  // Search query filter
+  const search = query.toLowerCase();
+  const matchesSearch =
+    !query ||
+    item.firstName?.toLowerCase().includes(search) ||
+    item.lastName?.toLowerCase().includes(search) ||
+    item.facilityName?.toLowerCase().includes(search) ||
+    item.role?.toLowerCase().includes(search) ||
+    item.location?.toLowerCase().includes(search) ||
+    item.profession?.toLowerCase().includes(search);
 
-    // Role filter
-    const matchesRole =
-      filters.roles?.length === 0 ||
-      filters.roles?.some(
-        (role) => item.role?.toLowerCase() === role.toLowerCase()
-      );
-
-    // Gender filter
-    const matchesGender =
-      filters.genders?.length === 0 ||
-      filters.genders?.some(
-        (gender) => item.sex?.toLowerCase() === gender.toLowerCase()
-      );
-
-    // Languages filter
-    const matchesLanguages =
-      filters.languages?.length === 0 ||
-      filters.languages?.some((lang) => item.languages?.includes(lang));
-
-    // Location filter
-    const matchesLocation =
-      filters.locations?.length === 0 ||
-      filters.locations?.some((loc) =>
-        item.location?.toLowerCase().includes(loc.toLowerCase())
-      );
-
-    // Profession filter
-    const matchesProfession =
-      !filters.profession ||
-      item.profession?.toLowerCase().includes(filters.profession.toLowerCase());
-
-    // Price filter (if you have pricing data)
-    const matchesPrice =
-      (!filters.minPrice || (item.pricing?.amount || 0) >= filters.minPrice) &&
-      (!filters.maxPrice || (item.pricing?.amount || 0) <= filters.maxPrice);
-
-    // Service filter (if needed - adjust based on your data structure)
-    const matchesService =
-      !filters.service ||
-      item.services?.some((s) =>
-        s.name?.toLowerCase().includes(filters.service.toLowerCase())
-      );
-
-    // Specialty filter (if needed - adjust based on your data structure)
-    const matchesSpecialty =
-      !filters.specialty ||
-      item.specialties?.some((s) =>
-        s.name?.toLowerCase().includes(filters.specialty.toLowerCase())
-      );
-
-    // Subspecialty filter (if needed - adjust based on your data structure)
-    const matchesSubspecialty =
-      !filters.subspecialty ||
-      item.subspecialties?.some((s) =>
-        s.name?.toLowerCase().includes(filters.subspecialty.toLowerCase())
-      );
-
-    return (
-      matchesSearch &&
-      matchesRole &&
-      matchesGender &&
-      matchesLanguages &&
-      matchesLocation &&
-      matchesProfession &&
-      matchesPrice &&
-      matchesService &&
-      matchesSpecialty &&
-      matchesSubspecialty
+  // Individual filter checks
+  const matchesRole =
+    filters.roles?.length === 0 ||
+    filters.roles?.some(
+      (role) => item.role?.toLowerCase() === role.toLowerCase()
     );
-  });
+
+  const matchesGender =
+    filters.genders?.length === 0 ||
+    filters.genders?.some(
+      (gender) => item.sex?.toLowerCase() === gender.toLowerCase()
+    );
+
+  // For "Match All" mode, check if item has ALL selected languages
+  const matchesLanguages =
+    filters.languages?.length === 0 ||
+    (filters.matchMode === "all"
+      ? filters.languages.every((lang) => item.languages?.includes(lang))
+      : filters.languages.some((lang) => item.languages?.includes(lang)));
+
+  const matchesLocation =
+    filters.locations?.length === 0 ||
+    (filters.matchMode === "all"
+      ? filters.locations.every((loc) =>
+          item.location?.toLowerCase().includes(loc.toLowerCase())
+        )
+      : filters.locations.some((loc) =>
+          item.location?.toLowerCase().includes(loc.toLowerCase())
+        ));
+
+  const matchesProfession =
+    !filters.profession ||
+    item.profession?.toLowerCase().includes(filters.profession.toLowerCase());
+
+  const matchesPrice =
+    (!filters.minPrice || (item.pricing?.amount || 0) >= filters.minPrice) &&
+    (!filters.maxPrice || (item.pricing?.amount || 0) <= filters.maxPrice);
+
+  const matchesService =
+    !filters.service ||
+    item.services?.some((s) =>
+      s.name?.toLowerCase().includes(filters.service.toLowerCase())
+    );
+
+  const matchesSpecialty =
+    !filters.specialty ||
+    item.specialties?.some((s) =>
+      s.name?.toLowerCase().includes(filters.specialty.toLowerCase())
+    );
+
+  const matchesSubspecialty =
+    !filters.subspecialty ||
+    item.subspecialties?.some((s) =>
+      s.name?.toLowerCase().includes(filters.subspecialty.toLowerCase())
+    );
+
+  return (
+    matchesSearch &&
+    matchesRole &&
+    matchesGender &&
+    matchesLanguages &&
+    matchesLocation &&
+    matchesProfession &&
+    matchesPrice &&
+    matchesService &&
+    matchesSpecialty &&
+    matchesSubspecialty
+  );
+});
 
   useEffect(() => {
     fetchUsers();

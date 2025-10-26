@@ -162,11 +162,11 @@ export const THEMES = [
   },
 ];
 
-export const FILTER_ROLES = ["Doctor", "Institute"];
+export const ROLES = ["Doctor", "Institute"];
 
-export const FILTER_GENDERS = ["Male", "Female"];
+export const GENDERS = ["Male", "Female"];
 
-export const FILTER_LOCATIONS = [
+export const LOCATIONS = [
   "Manila",
   "Cebu",
   "Davao",

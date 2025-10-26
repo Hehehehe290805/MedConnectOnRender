@@ -1,15 +1,16 @@
 import { useState, useRef, useEffect } from "react";
 import { FilterIcon, XIcon, ChevronDownIcon } from "lucide-react";
 import {
-  FILTER_ROLES,
-  FILTER_GENDERS,
+  ROLES,
+  GENDERS,
   LANGUAGES,
-  FILTER_LOCATIONS,
+  LOCATIONS,
 } from "../constants/index.js";
 
 const FilterSearch = ({ onFilterChange }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const [matchMode, setMatchMode] = useState("any"); // "any" or "all"
 
   // Checkbox filters
   const [selectedRoles, setSelectedRoles] = useState([]);
@@ -39,6 +40,7 @@ const FilterSearch = ({ onFilterChange }) => {
   // Apply filters
   useEffect(() => {
     const filters = {
+      matchMode, // Include match mode in filters
       roles: selectedRoles,
       genders: selectedGenders,
       languages: selectedLanguages,
@@ -52,6 +54,7 @@ const FilterSearch = ({ onFilterChange }) => {
     };
     onFilterChange(filters);
   }, [
+    matchMode,
     selectedRoles,
     selectedGenders,
     selectedLanguages,
@@ -143,13 +146,41 @@ const FilterSearch = ({ onFilterChange }) => {
               </div>
             </div>
 
+            {/* Match Mode Toggle */}
+            <div className="bg-base-300 p-3 rounded-lg">
+              <p className="text-sm font-semibold mb-2">Filter Mode</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setMatchMode("any")}
+                  className={`btn btn-sm flex-1 ${
+                    matchMode === "any" ? "btn-primary" : "btn-ghost"
+                  }`}
+                >
+                  Match Any
+                </button>
+                <button
+                  onClick={() => setMatchMode("all")}
+                  className={`btn btn-sm flex-1 ${
+                    matchMode === "all" ? "btn-primary" : "btn-ghost"
+                  }`}
+                >
+                  Match All
+                </button>
+              </div>
+              <p className="text-xs opacity-70 mt-2">
+                {matchMode === "any"
+                  ? "Show results that match at least one selected filter"
+                  : "Show only results that match all selected filters"}
+              </p>
+            </div>
+
             <div className="divider my-2"></div>
 
             {/* Role Filter */}
             <div>
               <p className="font-semibold mb-2">Role</p>
               <div className="space-y-2">
-                {FILTER_ROLES.map((role) => (
+                {ROLES.map((role) => (
                   <label key={role} className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
@@ -171,7 +202,7 @@ const FilterSearch = ({ onFilterChange }) => {
             <div>
               <p className="font-semibold mb-2">Gender</p>
               <div className="space-y-2">
-                {FILTER_GENDERS.map((gender) => (
+                {GENDERS.map((gender) => (
                   <label key={gender} className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
@@ -219,7 +250,7 @@ const FilterSearch = ({ onFilterChange }) => {
             <div>
               <p className="font-semibold mb-2">Location</p>
               <div className="space-y-2 max-h-40 overflow-y-auto">
-                {FILTER_LOCATIONS.map((location) => (
+                {LOCATIONS.map((location) => (
                   <label key={location} className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
