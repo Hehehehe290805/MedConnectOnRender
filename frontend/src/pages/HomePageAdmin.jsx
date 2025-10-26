@@ -2,29 +2,34 @@ import React, { useEffect, useState } from "react";
 import PendingUser from "../components/PendingUser.jsx";
 import PendingSuggestion from "../components/PendingSuggestion.jsx";
 import PendingClaim from "../components/PendingClaim.jsx";
-
+import PendingReport from "../components/PendingReport.jsx";
 import ViewPendingUserPopup from "./ViewPendingUserPopup.jsx";
 import ViewPendingSuggestionPopup from "./ViewPendingSuggestionPopup.jsx";
 import ViewPendingClaimPopup from "./ViewPendingClaimPopup.jsx";
+import ViewPendingReportPopup from "./ViewPendingReportPopup.jsx";
 import axios from "axios";
 
 const HomePageAdmin = () => {
     const [pendingUsers, setPendingUsers] = useState([]);
     const [pendingSuggestions, setPendingSuggestions] = useState([]);
     const [pendingClaims, setPendingClaims] = useState([]);
+    const [pendingReports, setPendingReports] = useState([]);
     const [selectedPendingUser, setSelectedPendingUser] = useState(null);
     const [selectedPendingSuggestion, setSelectedPendingSuggestion] = useState(null);
     const [selectedPendingClaim, setSelectedPendingClaim] = useState(null);
+    const [selectedPendingReport, setSelectedPendingReport] = useState(null);
     const [loading, setLoading] = useState({
         users: false,
         suggestions: false,
-        claims: false
+        claims: false,
+        reports: false
     });
 
     useEffect(() => {
         fetchPendingUsers();
         fetchPendingSuggestions();
         fetchPendingClaims();
+        fetchPendingReports();
     }, []);
 
     const fetchPendingUsers = async () => {
@@ -89,6 +94,28 @@ const HomePageAdmin = () => {
         }
     };
 
+    const fetchPendingReports = async () => {
+        try {
+            setLoading(prev => ({ ...prev, reports: true }));
+            const API_URL = import.meta.env.VITE_API_URL || "";
+            const res = await axios.get(`${API_URL}/api/admin/complaints`, {
+                withCredentials: true,
+            });
+            console.log("Fetched pending reports:", res.data);
+            if (res.data.success && Array.isArray(res.data.complaints)) {
+                // Filter only pending reports
+                const pending = res.data.complaints.filter(report => report.status === "pending");
+                setPendingReports(pending);
+            } else {
+                setPendingReports([]);
+            }
+        } catch (err) {
+            console.error("Error fetching pending reports:", err);
+        } finally {
+            setLoading(prev => ({ ...prev, reports: false }));
+        }
+    };
+
     // Approval handlers
     const handleUserApproved = (approvedUserId) => {
         setPendingUsers(prevUsers =>
@@ -108,6 +135,12 @@ const HomePageAdmin = () => {
         );
     };
 
+    const handleReportResolved = (resolvedReportId) => {
+        setPendingReports(prevReports =>
+            prevReports.filter(report => report._id !== resolvedReportId)
+        );
+    };
+
     // Modal handlers
     const openUserModal = (user) => setSelectedPendingUser(user);
     const closeUserModal = () => setSelectedPendingUser(null);
@@ -117,6 +150,9 @@ const HomePageAdmin = () => {
 
     const openClaimModal = (claim) => setSelectedPendingClaim(claim);
     const closeClaimModal = () => setSelectedPendingClaim(null);
+
+    const openReportModal = (report) => setSelectedPendingReport(report);
+    const closeReportModal = () => setSelectedPendingReport(null);
 
     return (
         <div className="p-8 flex flex-col space-y-8">
@@ -182,9 +218,25 @@ const HomePageAdmin = () => {
                 )}
             </section>
 
-            {/* Section 4: Empty Section */}
-            <section className="border rounded shadow-sm p-4 h-80 overflow-y-auto">
-                <h2 className="text-xl font-bold mb-4">Section 4</h2>
+            {/* Section 4: Pending Reports */}
+            <section className="border rounded shadow-sm p-4 h-80 overflow-y-auto flex flex-col">
+                <h2 className="text-xl font-bold mb-4">Pending Reports</h2>
+                {loading.reports ? (
+                    <p>Loading...</p>
+                ) : pendingReports.length === 0 ? (
+                    <p>No pending reports.</p>
+                ) : (
+                    <div className="flex flex-col space-y-2">
+                        {pendingReports.map((report) => (
+                            <PendingReport
+                                key={report._id}
+                                report={report}
+                                onViewDetails={openReportModal}
+                                onReportResolved={handleReportResolved}
+                            />
+                        ))}
+                    </div>
+                )}
             </section>
 
             {/* Modals */}
@@ -209,6 +261,14 @@ const HomePageAdmin = () => {
                     claim={selectedPendingClaim}
                     onClose={closeClaimModal}
                     onClaimApproved={handleClaimApproved}
+                />
+            )}
+
+            {selectedPendingReport && (
+                <ViewPendingReportPopup
+                    report={selectedPendingReport}
+                    onClose={closeReportModal}
+                    onReportResolved={handleReportResolved}
                 />
             )}
         </div>
