@@ -7,6 +7,9 @@ const Sidebar = () => {
   const location = useLocation();
   const currentPath = location.pathname;
 
+  // Generate full name from first and last name
+  const fullName = `${authUser?.firstName || ''} ${authUser?.lastName || ''}`.trim() || 'User';
+
   return (
     <aside className="w-64 bg-base-200 border-r border-base-300 hidden lg:flex flex-col h-screen sticky top-0">
       <div className="p-5 border-b border-base-300">
@@ -21,9 +24,8 @@ const Sidebar = () => {
       <nav className="flex-1 p-4 space-y-1">
         <Link
           to="/"
-          className={`btn btn-ghost justify-start w-full gap-3 px-3 normal-case ${
-            currentPath === "/" ? "btn-active" : ""
-          }`}
+          className={`btn btn-ghost justify-start w-full gap-3 px-3 normal-case ${currentPath === "/" ? "btn-active" : ""
+            }`}
         >
           <HomeIcon className="size-5 text-base-content opacity-70" />
           <span>Home</span>
@@ -31,9 +33,8 @@ const Sidebar = () => {
 
         <Link
           to="/search"
-          className={`btn btn-ghost justify-start w-full gap-3 px-3 normal-case ${
-            currentPath === "/friends" ? "btn-active" : ""
-          }`}
+          className={`btn btn-ghost justify-start w-full gap-3 px-3 normal-case ${currentPath === "/search" ? "btn-active" : "" // Fixed: was checking for /friends
+            }`}
         >
           <SearchIcon className="size-5 text-base-content opacity-70" />
           <span>Search</span>
@@ -41,9 +42,8 @@ const Sidebar = () => {
 
         <Link
           to="/notifications"
-          className={`btn btn-ghost justify-start w-full gap-3 px-3 normal-case ${
-            currentPath === "/notifications" ? "btn-active" : ""
-          }`}
+          className={`btn btn-ghost justify-start w-full gap-3 px-3 normal-case ${currentPath === "/notifications" ? "btn-active" : ""
+            }`}
         >
           <BellIcon className="size-5 text-base-content opacity-70" />
           <span>Notifications</span>
@@ -56,21 +56,27 @@ const Sidebar = () => {
           <div className="flex items-center gap-3">
             <div className="avatar">
               <div className="w-10 rounded-full">
-                <img src={authUser?.profilePic} alt="User Avatar" />
+                {authUser?.profilePic ? (
+                  <img src={authUser.profilePic} alt="User Avatar" />
+                ) : (
+                  <div className="bg-base-300 w-10 h-10 rounded-full flex items-center justify-center">
+                    <span className="text-sm">👤</span>
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex-1 text-left">
-              <p className="font-semibold text-sm">{authUser?.fullName}</p>
+              <p className="font-semibold text-sm">{fullName}</p>
               <p className="text-xs text-success flex items-center gap-1">
                 <span className="size-2 rounded-full bg-success inline-block" />
-                  Online
+                Online
               </p>
             </div>
           </div>
         </div>
       </Link>
-
     </aside>
   );
 };
+
 export default Sidebar;

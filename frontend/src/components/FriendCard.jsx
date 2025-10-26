@@ -1,50 +1,147 @@
 import { Link } from "react-router";
 
 const FriendCard = ({ friend }) => {
+  // Render based on user role
+  const renderUserInfo = () => {
+    switch (friend.role) {
+      case "doctor":
+        return (
+          <>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="avatar size-12">
+                {friend.profilePic ? (
+                  <img src={friend.profilePic} alt={`${friend.firstName} ${friend.lastName}`} className="rounded-full" />
+                ) : (
+                  <div className="bg-base-300 rounded-full w-12 h-12 flex items-center justify-center">
+                    <span className="text-lg">👤</span>
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-semibold truncate">
+                  {friend.firstName} {friend.lastName}
+                </h3>
+                <p className="text-sm text-gray-600 truncate">{friend.profession || friend.role}</p>
+              </div>
+            </div>
+
+            {/* Languages */}
+            {friend.languages && friend.languages.length > 0 && (
+              <div className="mb-2">
+                <p className="text-sm font-medium mb-1">Languages:</p>
+                <div className="flex flex-wrap gap-1">
+                  {friend.languages.map((language, index) => (
+                    <span key={index} className="badge badge-primary badge-sm">
+                      {language}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Location */}
+            {friend.location && (
+              <div className="mb-3">
+                <p className="text-sm font-medium mb-1">Location:</p>
+                <p className="text-sm">{friend.location}</p>
+              </div>
+            )}
+          </>
+        );
+
+      case "institute":
+        return (
+          <>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="avatar size-12">
+                {friend.profilePic ? (
+                  <img src={friend.profilePic} alt={friend.facilityName} className="rounded-full" />
+                ) : (
+                  <div className="bg-base-300 rounded-full w-12 h-12 flex items-center justify-center">
+                    <span className="text-lg">🏥</span>
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-semibold truncate">{friend.facilityName}</h3>
+                <p className="text-sm text-gray-600">Institute</p>
+              </div>
+            </div>
+
+            {/* Languages */}
+            {friend.languages && friend.languages.length > 0 && (
+              <div className="mb-2">
+                <p className="text-sm font-medium mb-1">Languages:</p>
+                <div className="flex flex-wrap gap-1">
+                  {friend.languages.map((language, index) => (
+                    <span key={index} className="badge badge-primary badge-sm">
+                      {language}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Location */}
+            {friend.location && (
+              <div className="mb-3">
+                <p className="text-sm font-medium mb-1">Location:</p>
+                <p className="text-sm">{friend.location}</p>
+              </div>
+            )}
+          </>
+        );
+
+      default: // Regular users
+        return (
+          <>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="avatar size-12">
+                {friend.profilePic ? (
+                  <img src={friend.profilePic} alt={`${friend.firstName} ${friend.lastName}`} className="rounded-full" />
+                ) : (
+                  <div className="bg-base-300 rounded-full w-12 h-12 flex items-center justify-center">
+                    <span className="text-lg">👤</span>
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-semibold truncate">
+                  {friend.firstName} {friend.lastName}
+                </h3>
+                <p className="text-sm text-gray-600">User</p>
+              </div>
+            </div>
+
+            {/* Languages */}
+            {friend.languages && friend.languages.length > 0 && (
+              <div className="mb-3">
+                <p className="text-sm font-medium mb-1">Languages:</p>
+                <div className="flex flex-wrap gap-1">
+                  {friend.languages.map((language, index) => (
+                    <span key={index} className="badge badge-primary badge-sm">
+                      {language}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        );
+    }
+  };
+
   return (
     <div className="card bg-base-200 hover:shadow-md transition-shadow">
       <div className="card-body p-4">
-        {/* USER INFO */}
-        <div className="flex items-center gap-3 mb-3">
-          <div className="avatar size-12">
-            <img src={friend.profilePic} alt={friend.fullName} />
-          </div>
-          <h3 className="font-semibold truncate">{friend.fullName}</h3>
-        </div>
+        {renderUserInfo()}
 
-        <div className="flex flex-wrap gap-1.5 mb-3">
-          <span className="badge badge-primary text-xs">
-            {getLanguageFlag(friend.nativeLanguage)}
-            Native: {friend.nativeLanguage}
-          </span>
-          <span className="badge badge-outline text-xs">
-            {getLanguageFlag(friend.learningLanguage)}
-            Learning: {friend.learningLanguage}
-          </span>
-        </div>
-
-        <Link to={`/chat/${friend._id}`} className="btn btn-outline w-full">
+        <Link to={`/chat/${friend._id}`} className="btn btn-outline w-full mt-2">
           Message
         </Link>
       </div>
     </div>
   );
 };
+
 export default FriendCard;
-
-export function getLanguageFlag(language) {
-  if (!language) return null;
-
-  const langLower = language.toLowerCase();
-
-  if (countryCode) {
-    return (
-      <img
-        src={`https://flagcdn.com/24x18/${countryCode}.png`}
-        alt={`${langLower} flag`}
-        className="h-3 mr-1 inline-block"
-      />
-    );
-  }
-  return null;
-}
