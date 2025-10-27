@@ -45,13 +45,13 @@ app.use("/api/specialties-and-services", specialtyAndServiceRoutes);
 app.use("/api/users", userRoutes);
 
 // ✅ Serve frontend only in production
-if (process.env.NODE_ENV === "production") {
-    app.use(express.static(path.join(__dirname, "../frontend/dist")));
+    // if (process.env.NODE_ENV === "production") {
+    //     app.use(express.static(path.join(__dirname, "../frontend/dist")));
 
-    app.get("*", (req, res) => {
-        res.sendFile(path.join(__dirname, "../frontend", "dist", "index.html"));
-    });
-}
+    //     app.get("*", (req, res) => {
+    //         res.sendFile(path.join(__dirname, "../frontend", "dist", "index.html"));
+    //     });
+    // }
 
 // ✅ Export app & DB connection for tests
 export { app, connectDB };
