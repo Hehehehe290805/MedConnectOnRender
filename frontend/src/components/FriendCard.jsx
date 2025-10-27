@@ -164,10 +164,6 @@ const FriendCard = ({ friend }) => {
               Book Now
             </button>
           )}
-
-          <Link to={`/chat/${friend._id}`} className="btn btn-outline w-full">
-            Message
-          </Link>
         </div>
       </div>
 
