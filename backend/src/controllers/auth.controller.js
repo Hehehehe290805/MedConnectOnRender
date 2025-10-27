@@ -2,146 +2,151 @@ import User from "../models/User.js";
 import jwt from "jsonwebtoken";
 import { upsertStreamUser } from "../lib/stream.js";
 
-export async function signup(req, res) {
-  const { email, password, fullName } = req.body;
-
+// ✅ Signup
+export const signup = async (req, res) => {
   try {
-    if (!email || !password || !fullName) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
+    const { email, password, role } = req.body;
 
-    if (password.length < 6) {
-      return res.status(400).json({ message: "Password must be at least 6 characters" });
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({ message: "Invalid email format" });
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required." });
     }
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: "Email already exists, please use a different one" });
+      return res.status(400).json({ message: "Email already registered." });
     }
 
-    const idx = Math.floor(Math.random() * 100) + 1; // generate a num between 1-100
-    const randomAvatar = `https://avatar.iran.liara.run/public/${idx}.png`;
-
-    const newUser = await User.create({
+    // Create user with raw password (pre-save hook will hash it)
+    const user = new User({
       email,
-      fullName,
       password,
-      profilePic: randomAvatar,
+      role,
+      isOnboarded: "notOnBoarded",
     });
 
-    try {
-      await upsertStreamUser({
-        id: newUser._id.toString(),
-        name: newUser.fullName,
-        image: newUser.profilePic || "",
-      });
-      console.log(`Stream user created for ${newUser.fullName}`);
-    } catch (error) {
-      console.log("Error creating Stream user:", error);
-    }
+    await user.save();
 
-    const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET_KEY, {
-      expiresIn: "7d",
-    });
+    // Generate JWT
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET_KEY, { expiresIn: "7d" });
 
     res.cookie("jwt", token, {
       maxAge: 7 * 24 * 60 * 60 * 1000,
-      httpOnly: true, // prevent XSS attacks,
-      sameSite: "strict", // prevent CSRF attacks
+      httpOnly: true,
+      sameSite: "strict",
       secure: process.env.NODE_ENV === "production",
     });
 
-    res.status(201).json({ success: true, user: newUser });
-  } catch (error) {
-    console.log("Error in signup controller", error);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
-}
+    return res.status(201).json({
+      message: "Account created successfully",
+      userId: user._id
+    });
 
-export async function login(req, res) {
+  } catch (error) {
+    console.error("Signup Error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// ✅ Login
+export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ message: "All fields are required" });
+      return res.status(400).json({ message: "Email and password are required." });
     }
 
     const user = await User.findOne({ email });
-    if (!user) return res.status(401).json({ message: "Invalid email or password" });
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
 
-    const isPasswordCorrect = await user.matchPassword(password);
-    if (!isPasswordCorrect) return res.status(401).json({ message: "Invalid email or password" });
+    // Use the model method for password comparison
+    const isPasswordValid = await user.matchPassword(password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "Invalid credentials." });
+    }
 
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET_KEY, {
-      expiresIn: "7d",
-    });
+    // Generate JWT
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET_KEY, { expiresIn: "7d" });
 
     res.cookie("jwt", token, {
       maxAge: 7 * 24 * 60 * 60 * 1000,
-      httpOnly: true, // prevent XSS attacks,
-      sameSite: "strict", // prevent CSRF attacks
+      httpOnly: true,
+      sameSite: "strict",
       secure: process.env.NODE_ENV === "production",
     });
 
-    res.status(200).json({ success: true, user });
-  } catch (error) {
-    console.log("Error in login controller", error.message);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
-}
+    return res.status(200).json({
+      message: "Login successful",
+      role: user.role,
+      userId: user._id,
+    });
 
-export function logout(req, res) {
+  } catch (error) {
+    console.error("Login Error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// ✅ Logout
+export const logout = (req, res) => {
   res.clearCookie("jwt");
   res.status(200).json({ success: true, message: "Logout successful" });
-}
+};
 
-export async function onboard(req, res) {
+// ✅ Get Current User
+export const getMe = async (req, res) => {
   try {
-    const userId = req.user._id;
-    const { fullName, nativeLanguage, learningLanguage, location, bio } = req.body;
+    const userId = req.user?.id; // use id from authenticated JWT
 
-    if (!fullName || !nativeLanguage || !learningLanguage || !location || !bio) {
-      return res.status(400).json({
-        message: "All fields are required",
-        missingFields: [
-          !fullName && "fullName",
-          !nativeLanguage && "nativeLanguage",
-          !learningLanguage && "learningLanguage",
-          !location && "location",
-          !bio && "bio",
-        ].filter(Boolean),
-      });
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
-    const updatedUser = await User.findByIdAndUpdate(userId, {
-      ...req.body,
-      isOnboarded: true,
-    }, { new: true });
+    // Return selected fields only
+    const { firstName, lastName, email, role, profilePic } = req.user;
 
-    if(!updatedUser) return res.status(404).json({ message: "User not found" });
-    try {
-      await upsertStreamUser({
-        id: updatedUser._id.toString(),
-        name: updatedUser.fullName,
-        image: updatedUser.profilePic || "",
-      });
-      console.log(`Stream user updated after onboarding for ${updatedUser.fullName}`);
-    } catch (streamError) {
-      console.log("Error updating Stream user during onboarding:", streamError.message);
-    }
-
-    res.status(200).json({ success: true, user: updatedUser });
-
+    return res.status(200).json({
+      success: true,
+      user: {
+        id: userId,
+        firstName,
+        lastName,
+        email,
+        role,
+        profilePic,
+      },
+    });
   } catch (error) {
-    console.error("Error in onboarding controller:", error);
-    res.status(500).json({ message: "Internal Server Error" }
-    );
+    console.error("Get Current User Error:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
+};
 
-}
+
+// ✅ Delete Account
+export const deleteMe = async (req, res) => {
+  try {
+    const userId = req.user?.id; // ID from authenticated JWT
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    // Delete the user directly
+    const deletedUser = await User.findByIdAndDelete(userId);
+
+    if (!deletedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Clear the JWT cookie
+    res.clearCookie("jwt");
+
+    return res.status(200).json({ message: "Account deleted successfully" });
+  } catch (error) {
+    console.error("Delete Account Error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};

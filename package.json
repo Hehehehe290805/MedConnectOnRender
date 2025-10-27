@@ -17,5 +17,8 @@
   "bugs": {
     "url": "https://github.com/Hehehehe290805/MedConnect/issues"
   },
-  "homepage": "https://github.com/Hehehehe290805/MedConnect#readme"
+  "homepage": "https://github.com/Hehehehe290805/MedConnect#readme",
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
 }

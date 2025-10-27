@@ -1,100 +1,156 @@
 import { Navigate, Route, Routes } from "react-router";
+import { Toaster } from "react-hot-toast";
+import React from "react";
 
-import HomePage from "./pages/HomePage.jsx";
+// Pages
+import HomePageUser from "./pages/HomePageUser.jsx";
+import HomePageDoctor from "./pages/HomePageDoctor.jsx";
+import HomePageInstitute from "./pages/HomePageInstitute.jsx";
+import HomePageAdmin from "./pages/HomePageAdmin.jsx";
 import SignUpPage from "./pages/SignUpPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import NotificationsPage from "./pages/NotificationsPage.jsx";
 import CallPage from "./pages/CallPage.jsx";
 import ChatPage from "./pages/ChatPage.jsx";
-import OnboardingPage from "./pages/OnboardingPage.jsx";
+import ProfilePage from "./pages/ProfilePage.jsx";
+import SearchPage from "./pages/SearchPage.jsx";
+import SettingsPage from "./pages/SettingsPage.jsx";
+import SpecialtyPage from "./pages/SpecialtyPage.jsx";
 
-import { Toaster } from "react-hot-toast";
+// Onboarding
+import OnboardingUser from "./pages/OnboardingUser.jsx";
+import OnboardingDoctor from "./pages/OnboardingDoctor.jsx";
+import OnboardingInstitute from "./pages/OnboardingInstitute.jsx";
+import OnboardingAdmin from "./pages/OnboardingAdmin.jsx";
+import Pending from "./pages/Pending.jsx";
 
+// Components
 import PageLoader from "./components/PageLoader.jsx";
-import useAuthUser from "./hooks/useAuthUser.js";
 import Layout from "./components/Layout.jsx";
+import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import OtherProfilePage from "./pages/OtherProfilePage.jsx";
+
+// Hooks & Stores
+import useAuthUser from "./hooks/useAuthUser.js";
 import { useThemeStore } from "./store/useThemeStore.js";
 
 const App = () => {
   const { isLoading, authUser } = useAuthUser();
   const { theme } = useThemeStore();
 
-  const isAuthenticated = Boolean(authUser)
-  const isOnboarded = authUser?.isOnboarded;
-
-
   if (isLoading) return <PageLoader />;
 
-  return <div className="min-h-screen" data-theme={theme}>
+  const isAuthenticated = Boolean(authUser);
+  const userStatus = authUser?.status;
+  const userRole = authUser?.role;
+
+  // Helpers
+  const getHomePageComponent = () => {
+    const roleComponents = {
+      doctor: <HomePageDoctor />,
+      institute: <HomePageInstitute />,
+      admin: <HomePageAdmin />,
+      user: <HomePageUser />,
+    };
+    return roleComponents[userRole] || <HomePageUser />;
+  };
+
+  const getOnboardingComponent = () => {
+    const onboardingComponents = {
+      doctor: <OnboardingDoctor />,
+      institute: <OnboardingInstitute />,
+      admin: <OnboardingAdmin />,
+      user: <OnboardingUser />,
+    };
+    return onboardingComponents[userRole] || <OnboardingUser />;
+  };
+
+  // Public routes - redirect to home if authenticated
+  const PublicRoute = ({ element }) =>
+    !isAuthenticated ? element : <Navigate to="/" replace />;
+
+  // Protected routes - require authentication and onboarding
+  const ProtectedRouteWithOnboarding = ({ element }) => {
+    if (!isAuthenticated) return <Navigate to="/login" replace />;
+    if (userStatus === "pending") return <Navigate to="/pending" replace />;
+    if (userStatus !== "onBoarded") return <Navigate to="/onboarding" replace />;
+    return element;
+  };
+
+  // Protected routes without onboarding check
+  const ProtectedRouteBasic = ({ element }) => {
+    if (!isAuthenticated) return <Navigate to="/login" replace />;
+    return element;
+  };
+
+  // Onboarding route handling
+  const OnboardingRoute = () => {
+    if (!isAuthenticated) return <Navigate to="/login" replace />;
+    if (userStatus === "pending") return <Navigate to="/pending" replace />;
+    if (userStatus === "onBoarded") return <Navigate to="/" replace />;
+    return getOnboardingComponent();
+  };
+
+  // Pending route handling
+  const PendingRoute = () => {
+    if (!isAuthenticated) return <Navigate to="/login" replace />;
+    if (userStatus !== "pending") return <Navigate to="/" replace />;
+    return <Pending />;
+  };
+
+  return (
+    <div className="min-h-screen" data-theme={theme}>
       <Routes>
-        <Route path="/" element={isAuthenticated && isOnboarded ? (
-          <Layout showSidebar={true}>
-            <HomePage />
-          </Layout>
-        ) : (
-          <Navigate to={isAuthenticated ? "/onboarding" : "/login"} />
-        )} />
-        <Route 
-          path="/signup" 
-          element={
-            !isAuthenticated ? <SignUpPage /> : <Navigate to={isOnboarded ? "/" : "/onboarding"} />
-          } 
-        />
-        <Route 
-          path="/login" 
-          element={
-            !isAuthenticated ? <LoginPage /> : <Navigate to={isOnboarded ? "/" : "/onboarding"} />
-         } 
-        />
-        <Route
-          path="/notifications"
-          element={
-            isAuthenticated && isOnboarded ? (
-              <Layout showSidebar={true}>
-                <NotificationsPage />
-              </Layout>
-            ) : (
-              <Navigate to={!isAuthenticated ? "/login" : "/onboarding"} />
-            )
-          }
-        />
-        <Route path="/call/:id" element={
-          isAuthenticated && isOnboarded ? (
-            <CallPage />
-          ) : (
-            <Navigate to={!isAuthenticated ? "/login" : "/onboarding"} />
-            )
+        {/* Public */}
+        <Route path="/signup" element={<PublicRoute element={<SignUpPage />} />} />
+        <Route path="/login" element={<PublicRoute element={<LoginPage />} />} />
+
+        {/* Onboarding & Pending */}
+        <Route path="/onboarding" element={<OnboardingRoute />} />
+        <Route path="/pending" element={<PendingRoute />} />
+
+        {/* Main Layout Routes */}
+        <Route element={<Layout showSidebar={true} />}>
+          <Route path="/" element={<ProtectedRouteWithOnboarding element={getHomePageComponent()} />} />
+          <Route path="/profile" element={<ProtectedRouteWithOnboarding element={<ProfilePage />} />} />
+          <Route path="/profile/:id" element={<ProtectedRouteWithOnboarding element={<OtherProfilePage />} />} />
+          <Route path="/settings" element={<ProtectedRouteWithOnboarding element={<SettingsPage />} />} />
+
+          {/* User-only */}
+          <Route path="/search" element={
+            <ProtectedRoute allowedRoles={["user"]}><SearchPage /></ProtectedRoute>
+          } />
+          <Route path="/notifications" element={
+            <ProtectedRoute allowedRoles={["user"]}><NotificationsPage /></ProtectedRoute>
           } />
           
-        <Route 
-          path="/chat/:id" 
-          element={
-            isAuthenticated && isOnboarded ? (
-              <Layout showSidebar={false}>
-                <ChatPage />
-              </Layout>
-            ) : (
-              <Navigate to={!isAuthenticated ? "/login" : "/onboarding"} />
-            )
+          {/* Doctor-only */}
+          <Route path="/specialty" element={
+            <ProtectedRoute allowedRoles={["doctor"]}><SpecialtyPage /></ProtectedRoute>
           } />
-        <Route
-          path="/onboarding"
-          element={
-            isAuthenticated ? (
-              !isOnboarded ? (
-                <OnboardingPage />
-              ) : (
-                <Navigate to="/" />
-              )
-            ) : (
-              <Navigate to="/login" />
-            )
-          }
-        />
+        </Route>
+
+          
+
+        {/* Minimal Layout Routes */}
+        <Route element={<Layout showSidebar={false} />}>
+          <Route path="/chat/:id" element={
+            <ProtectedRoute allowedRoles={["user", "doctor", "institute"]}><ChatPage /></ProtectedRoute>
+          } />
+        </Route>
+
+        {/* No Layout */}
+        <Route path="/call/:id" element={
+          <ProtectedRoute allowedRoles={["user", "doctor", "institute"]}><CallPage /></ProtectedRoute>
+        } />
+
+        {/* Catch-all */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
-    < Toaster />
-    </div>;
+      <Toaster />
+    </div>
+  );
 };
 
-export default App
+export default App;

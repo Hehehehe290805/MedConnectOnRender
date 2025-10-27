@@ -1,5 +1,5 @@
 import User from "../models/User.js";
-import FriendRequest from "../models/FirendRequest.js";
+import FriendRequest from "../models/FriendRequest.js";
 
 export async function getRecommendedUsers(req, res) {
   try {
@@ -19,7 +19,6 @@ export async function getRecommendedUsers(req, res) {
     res.status(500).json({ message: "Internal Server Error" });
   }
 }
-
 export async function getMyFriends(req, res) {
   try {
     const user = await User.findById(req.user.id)
@@ -32,7 +31,6 @@ export async function getMyFriends(req, res) {
     res.status(500).json({ message: "Internal Server Error" });
   }
 }
-
 export async function sendFriendRequest(req, res) {
   try {
     const myId = req.user.id;
@@ -79,7 +77,6 @@ export async function sendFriendRequest(req, res) {
     res.status(500).json({ message: "Internal Server Error" });
   }
 }
-
 export async function acceptFriendRequest(req, res) {
   try {
     const {id:requestId} = req.params
@@ -114,7 +111,6 @@ export async function acceptFriendRequest(req, res) {
     res.status(500).json({ message: "Internal Server Error" });
   }
 }
-
 // export async function getFriendRequests(req, res) {
 //   try {
 //     const incomingRequests = await FriendRequest.find({
@@ -134,7 +130,6 @@ export async function acceptFriendRequest(req, res) {
 //     res.status(500).json({ message: "Internal Server Error" });
 //   }
 // }
-
 export async function getFriendRequests(req, res) {
   try {
     const incomingReqs = await FriendRequest.find({
@@ -157,8 +152,6 @@ export async function getFriendRequests(req, res) {
     return res.status(500).json({ message: "Internal Server Error" });
   }
 }
- 
-
 export async function getOutgoingFriendRequests(req, res) {
   try {
     const outgoingRequests = await FriendRequest.find({
@@ -168,6 +161,100 @@ export async function getOutgoingFriendRequests(req, res) {
     res.status(200).json(outgoingRequests);
   }catch (error) {
     console.error("Error in getOutgoingFriendRequests controller", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+// Get users by role
+export async function getUsers(req, res) {
+  try {
+    const users = await User.find({
+      status: "onBoarded",
+      role: "user",
+    }).select("firstName lastName profession birthDate");
+
+    const formatted = users.map(user => ({
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      birthDate: user.birthDate ? user.birthDate.toISOString().split("T")[0] : null,
+    }));
+
+    res.status(200).json({ success: true, users: formatted });
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+export async function getDoctors(req, res) {
+  try {
+    const doctors = await User.find({
+      status: "onBoarded",
+      role: "doctor",
+    }).select("-password -licenseNumber -gcash.accountNumber"); // Don't expose sensitive data
+
+    // Return data key to match frontend expectation
+    res.status(200).json({ data: doctors });
+  } catch (error) {
+    console.error("Error fetching doctors:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+export async function getPharmacies(req, res) {
+  try {
+    const pharmacies = await User.find({
+      status: "onBoarded",
+      role: "pharmacist"
+    }).select("firstName lastName profession birthDate facilityName");
+
+    const formatted = pharmacies.map(user => ({
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      profession: user.profession,
+      birthDate: user.birthDate ? user.birthDate.toISOString().split("T")[0] : null,
+      facilityName: user.facilityName,
+    }));
+
+    res.status(200).json({ success: true, users: formatted });
+  } catch (error) {
+    console.error("Error fetching pharmacies:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+export async function getInstitutes(req, res) {
+  try {
+    const institutes = await User.find({
+      status: "onBoarded",
+      role: "institute",
+    }).select("-password -licenseNumber -gcash.accountNumber"); // Don't expose sensitive data
+
+    // Return data key to match frontend expectation
+    res.status(200).json({ data: institutes });
+  } catch (error) {
+    console.error("Error fetching institutes:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+export async function getUserById(req, res) {
+  try {
+    const { userId } = req.params;
+    
+    const user = await User.findById(userId)
+      .select("-password -licenseNumber") // Don't expose sensitive data
+      .lean();
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({ data: user });
+  } catch (error) {
+    console.error("Error fetching user:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 }
