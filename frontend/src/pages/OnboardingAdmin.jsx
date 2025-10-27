@@ -8,7 +8,7 @@ import {
     BriefcaseMedicalIcon,
     ShuffleIcon,
 } from "lucide-react";
-import { LANGUAGES } from "../constants/index.js";
+import { LANGUAGES, LOCATIONS } from "../constants/index.js";
 import { CameraIcon } from "@heroicons/react/24/outline";
 
 const OnboardingPage = () => {
@@ -241,18 +241,21 @@ const OnboardingPage = () => {
                             <label className="label">
                                 <span className="label-text">Location</span>
                             </label>
-                            <div className="relative">
-                                <input
-                                    type="text"
-                                    value={formState.location}
-                                    onChange={(e) =>
-                                        setFormState({ ...formState, location: e.target.value })
-                                    }
-                                    className="input input-bordered w-full"
-                                    placeholder="City, Country"
-                                    disabled={isSubmitDisabled}
-                                />
-                            </div>
+                            <select
+                                value={formState.location}
+                                onChange={(e) =>
+                                    setFormState({ ...formState, location: e.target.value })
+                                }
+                                className="select select-bordered w-full"
+                                disabled={isSubmitDisabled}
+                            >
+                                <option value="">Select Location</option>
+                                {LOCATIONS.map((location) => (
+                                    <option key={location} value={location}>
+                                        {location}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
 
                         {/* ADMIN CODE */}

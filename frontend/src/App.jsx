@@ -14,6 +14,7 @@ import ChatPage from "./pages/ChatPage.jsx";
 import ProfilePage from "./pages/ProfilePage.jsx";
 import SearchPage from "./pages/SearchPage.jsx";
 import SettingsPage from "./pages/SettingsPage.jsx";
+
 // Onboarding
 import OnboardingUser from "./pages/OnboardingUser.jsx";
 import OnboardingDoctor from "./pages/OnboardingDoctor.jsx";
@@ -28,35 +29,21 @@ import PageLoader from "./components/PageLoader.jsx";
 import useAuthUser from "./hooks/useAuthUser.js";
 import Layout from "./components/Layout.jsx";
 import { useThemeStore } from "./store/useThemeStore.js";
-import Appointment from "../../backend/src/models/Appointment.js";
-import { User } from "lucide-react";
-import OtherPage from "./pages/OtherProfilePage.jsx";
+import OtherProfilePage from "./pages/OtherProfilePage.jsx";
+import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
 const App = () => {
   const { isLoading, authUser } = useAuthUser();
   const { theme } = useThemeStore();
 
-  const isAuthenticated = Boolean(authUser)
+  if (isLoading) return <PageLoader />;
+
+  const isAuthenticated = Boolean(authUser);
   const isOnboarded = authUser?.status === "onBoarded";
   const isPending = authUser?.status === "pending";
   const userRole = authUser?.role;
 
-  if (isLoading) return <PageLoader />;
-
-  const getOnboardingComponent = () => {
-    switch (userRole) {
-      case "doctor":
-        return <OnboardingDoctor />;
-      case "institute":
-        return <OnboardingInstitute />;
-      case "admin":
-        return <OnboardingAdmin />;
-      case "user":
-      default:
-        return <OnboardingUser />;
-    }
-  };
-
+  // Helper to get the correct home page based on role
   const getHomePageComponent = () => {
     switch (userRole) {
       case "doctor":
@@ -65,131 +52,25 @@ const App = () => {
         return <HomePageInstitute />;
       case "admin":
         return <HomePageAdmin />;
-      case "user":
       default:
         return <HomePageUser />;
     }
   };
 
-  return <div className="min-h-screen" data-theme={theme}>
+  return (
+    <div className="min-h-screen" data-theme={theme}>
       <Routes>
+        {/* Public Routes */}
         <Route
-          path="/"
-          element={
-            isAuthenticated ? (
-              isPending ? (
-                <Navigate to="/pending" />
-              ) : isOnboarded ? (
-                <Layout showSidebar={true}>
-                {getHomePageComponent()}
-                </Layout>
-              ) : (
-                <Navigate to="/onboarding" />
-              )
-            ) : (
-              <Navigate to="/login" />
-            )
-          }
+          path="/signup"
+          element={!isAuthenticated ? <SignUpPage /> : <Navigate to="/" />}
         />
         <Route
-          path="/pending"
-          element={
-            isAuthenticated && isPending ? (
-              <Pending />
-            ) : (
-              <Navigate to={isAuthenticated ? "/" : "/login"} />
-            )
-          }
+          path="/login"
+          element={!isAuthenticated ? <LoginPage /> : <Navigate to="/" />}
         />
-        <Route 
-          path="/signup" 
-          element={
-            !isAuthenticated ? <SignUpPage /> : <Navigate to={isOnboarded ? "/" : "/onboarding"} />
-          } 
-        />
-        <Route 
-          path="/login" 
-          element={
-            !isAuthenticated ? <LoginPage /> : <Navigate to={isOnboarded ? "/" : "/onboarding"} />
-         } 
-        />
-        <Route
-          path="/notifications"
-          element={
-            isAuthenticated && isOnboarded ? (
-              <Layout showSidebar={true}>
-                <NotificationsPage />
-              </Layout>
-            ) : (
-              <Navigate to={!isAuthenticated ? "/login" : "/onboarding"} />
-            )
-          }
-        />
-        <Route
-          path="/profile"
-          element={
-            isAuthenticated ? (
-              <Layout showSidebar={true}>
-                <ProfilePage />
-              </Layout>
-            ) : (
-              <Navigate to={!isAuthenticated ? "/login" : "/onboarding"} />
-            )
-          }
-        />
-        <Route
-          path="/search"
-          element={
-            isAuthenticated ? (
-              <Layout showSidebar={true}>
-                <SearchPage />
-              </Layout>
-            ) : (
-              <Navigate to={!isAuthenticated ? "/login" : "/onboarding"} />
-            )
-          }
-        />
-        <Route
-        path="/settings"
-          element={
-            isAuthenticated ? (
-              <Layout showSidebar={true}>
-                <SettingsPage />
-              </Layout>
-            ) : (
-              <Navigate to={!isAuthenticated ? "/login" : "/onboarding"} />
-            )
-          }
-        />
-        <Route path="/call/:id" element={
-          isAuthenticated && isOnboarded ? (
-            <CallPage />
-          ) : (
-            <Navigate to={!isAuthenticated ? "/login" : "/onboarding"} />
-            )
-          } />     
-        <Route 
-          path="/chat/:id" 
-          element={
-            isAuthenticated && isOnboarded ? (
-              <Layout showSidebar={false}>
-                <ChatPage />
-              </Layout>
-            ) : (
-              <Navigate to={!isAuthenticated ? "/login" : "/onboarding"} />
-            )
-          } />
-          <Route 
-          path="/profile/:id" 
-          element={
-            isAuthenticated && isOnboarded ? (
-              <Layout showSidebar={true}>
-                <OtherPage />
-              </Layout>
-            ) : (
-              <Navigate to={!isAuthenticated ? "/login" : "/onboarding"} />
-            )
-          } />
+
+        {/* Onboarding Routes */}
         <Route
           path="/onboarding"
           element={
@@ -197,7 +78,15 @@ const App = () => {
               isPending ? (
                 <Navigate to="/pending" />
               ) : !isOnboarded ? (
-                getOnboardingComponent()
+                userRole === "doctor" ? (
+                  <OnboardingDoctor />
+                ) : userRole === "institute" ? (
+                  <OnboardingInstitute />
+                ) : userRole === "admin" ? (
+                  <OnboardingAdmin />
+                ) : (
+                  <OnboardingUser />
+                )
               ) : (
                 <Navigate to="/" />
               )
@@ -206,12 +95,106 @@ const App = () => {
             )
           }
         />
-        
-      </Routes>
-      
 
-    < Toaster />
-    </div>;
+        <Route
+          path="/pending"
+          element={
+            isAuthenticated && isPending ? <Pending /> : <Navigate to="/" />
+          }
+        />
+
+        {/* Protected Routes with Layout */}
+        <Route element={<Layout showSidebar={true} />}>
+          {/* Home - All roles */}
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute allowedRoles={["user", "doctor", "institute", "admin"]}>
+                {getHomePageComponent()}
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Profile - All roles */}
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute allowedRoles={["user", "doctor", "institute", "admin"]}>
+                <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Other User Profile - All roles */}
+          <Route
+            path="/profile/:id"
+            element={
+              <ProtectedRoute allowedRoles={["user", "doctor", "institute", "admin"]}>
+                <OtherProfilePage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Settings - All roles */}
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute allowedRoles={["user", "doctor", "institute", "admin"]}>
+                <SettingsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Search - Only users */}
+          <Route
+            path="/search"
+            element={
+              <ProtectedRoute allowedRoles={["user"]}>
+                <SearchPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Notifications - Only users */}
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedRoute allowedRoles={["user"]}>
+                <NotificationsPage />
+              </ProtectedRoute>
+            }
+          />
+        </Route>
+
+        {/* Routes without full layout (chat and call pages) */}
+        <Route element={<Layout showSidebar={false} />}>
+          <Route
+            path="/chat/:id"
+            element={
+              <ProtectedRoute allowedRoles={["user", "doctor", "institute"]}>
+                <ChatPage />
+              </ProtectedRoute>
+            }
+          />
+        </Route>
+
+        {/* Call page without layout */}
+        <Route
+          path="/call/:id"
+          element={
+            <ProtectedRoute allowedRoles={["user", "doctor", "institute"]}>
+              <CallPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Catch all */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+
+      <Toaster />
+    </div>
+  );
 };
 
-export default App
+export default App;

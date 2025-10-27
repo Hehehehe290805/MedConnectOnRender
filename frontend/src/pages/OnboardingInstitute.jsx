@@ -9,7 +9,7 @@ import {
     BriefcaseMedicalIcon,
     ShuffleIcon,
 } from "lucide-react";
-import { LANGUAGES } from "../constants/index.js";
+import { LANGUAGES, LOCATIONS } from "../constants/index.js";
 import { CameraIcon } from "@heroicons/react/24/outline";
 
 const OnboardingPage = () => {
@@ -236,17 +236,22 @@ const OnboardingPage = () => {
                                 <span className="label-text">Location</span>
                             </label>
                             <div className="relative">
-                                <MapPinIcon className="absolute top-1/2 transform -translate-y-1/2 left-3 size-5 text-base-content opacity-70" />
-                                <input
-                                    type="text"
+                                <MapPinIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-base-content opacity-70 pointer-events-none" />
+                                <select
                                     value={formState.location}
                                     onChange={(e) =>
                                         setFormState({ ...formState, location: e.target.value })
                                     }
-                                    className="input input-bordered w-full pl-10"
-                                    placeholder="City, Country"
+                                    className="select select-bordered w-full pl-10"
                                     disabled={isSubmitDisabled}
-                                />
+                                >
+                                    <option value="">Select Location</option>
+                                    {LOCATIONS.map((location) => (
+                                        <option key={location} value={location}>
+                                            {location}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
 
