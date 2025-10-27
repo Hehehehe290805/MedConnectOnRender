@@ -1,202 +1,337 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router";
+import useAuthUser from "../hooks/useAuthUser";
 import axios from "axios";
 
 const PendingAppointment = ({ appointment, onAppointmentUpdated, onViewDetails }) => {
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
+  const navigate = useNavigate();
+  const { authUser } = useAuthUser();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [isReporting, setIsReporting] = useState(false);
+  const [complaint, setComplaint] = useState("");
+  const [reportLoading, setReportLoading] = useState(false);
+  
+  // Store fetched user data
+  const [doctor, setDoctor] = useState(null);
+  const [patient, setPatient] = useState(null);
+  const [institute, setInstitute] = useState(null);
 
-    // State for report modal (localized to this appointment)
-    const [isReporting, setIsReporting] = useState(false);
-    const [complaint, setComplaint] = useState("");
-    const [reportLoading, setReportLoading] = useState(false);
+  const API_URL = import.meta.env.VITE_API_URL || "";
 
-    const getStatusBadge = (status) => {
-        const statusColors = {
-            pending_accept: "badge-warning",
-            awaiting_deposit: "badge-info",
-            booked: "badge-primary",
-            confirmed: "badge-success",
-            ongoing: "badge-secondary",
-            marked_complete: "badge-accent",
-            completed: "badge-success",
-            fully_paid: "badge-primary",
-            confirm_fully_paid: "badge-success",
-            cancelled_unpaid: "badge-error",
-            cancelled: "badge-error",
-            rejected: "badge-error",
-            no_show_patient: "badge-error",
-            no_show_doctor: "badge-error",
-            no_show_both: "badge-error",
-            freeze: "badge-neutral"
-        };
 
-        const statusLabels = {
-            pending_accept: "Pending Accept",
-            awaiting_deposit: "Awaiting Deposit",
-            booked: "Booked",
-            confirmed: "Confirmed",
-            ongoing: "Ongoing",
-            marked_complete: "Marked Complete",
-            completed: "Completed",
-            fully_paid: "Fully Paid",
-            confirm_fully_paid: "Payment Confirmed",
-            cancelled_unpaid: "Cancelled (Unpaid)",
-            cancelled: "Cancelled",
-            rejected: "Rejected",
-            no_show_patient: "No Show (Patient)",
-            no_show_doctor: "No Show (Doctor)",
-            no_show_both: "No Show (Both)",
-            freeze: "Frozen"
-        };
-
-        return (
-            <span className={`badge ${statusColors[status] || 'badge-neutral'}`}>
-                {statusLabels[status] || status}
-            </span>
-        );
+  // Fetch doctor/patient/institute info based on role
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      try {
+        if (authUser?.role === "user") {
+          // User needs doctor or institute info
+          if (appointment.doctorId) {
+            const doctorIdStr = typeof appointment.doctorId === "string" 
+              ? appointment.doctorId 
+              : appointment.doctorId._id;
+            
+            const res = await axios.get(`${API_URL}/api/users/${doctorIdStr}`, {
+              withCredentials: true
+            });
+            setDoctor(res.data.data);
+          } else if (appointment.instituteId) {
+            const instituteIdStr = typeof appointment.instituteId === "string"
+              ? appointment.instituteId
+              : appointment.instituteId._id;
+            
+            const res = await axios.get(`${API_URL}/api/users/${instituteIdStr}`, {
+              withCredentials: true
+            });
+            setInstitute(res.data.data);
+          }
+        } else if (authUser?.role === "doctor" || authUser?.role === "institute") {
+          // Doctor/Institute needs patient info
+          if (appointment.patientId) {
+            const patientIdStr = typeof appointment.patientId === "string"
+              ? appointment.patientId
+              : appointment.patientId._id;
+            
+            const res = await axios.get(`${API_URL}/api/users/${patientIdStr}`, {
+              withCredentials: true
+            });
+            setPatient(res.data.data);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch user info:", err);
+      }
     };
 
-    const formatDateTime = (dateString) => {
-        const date = new Date(dateString);
-        return {
-            date: date.toLocaleDateString(),
-            time: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-    };
+    if (authUser && appointment) {
+      fetchUserInfo();
+    }
+  }, [appointment, authUser]);
 
-    const { date, time } = formatDateTime(appointment.start);
+  // Determine who to chat with based on current user's role
+  const getChatRecipientId = () => {
+    if (!authUser) return null;
 
-    const getPaymentStatus = () => {
-        if (appointment.depositPaid && appointment.balancePaid) {
-            return "Fully Paid";
-        } else if (appointment.depositPaid) {
-            return "Deposit Paid";
-        } else {
-            return "Awaiting Payment";
-        }
-    };
+    if (authUser.role === "user") {
+      if (appointment.doctorId) {
+        return typeof appointment.doctorId === "string"
+          ? appointment.doctorId
+          : appointment.doctorId._id;
+      }
+      if (appointment.instituteId) {
+        return typeof appointment.instituteId === "string"
+          ? appointment.instituteId
+          : appointment.instituteId._id;
+      }
+    }
 
-    // Report function localized to this appointment
-    const handleReport = async () => {
-        if (!complaint.trim()) {
-            console.log(`Appointment ${appointment._id}: Complaint is empty`);
-            return;
-        }
+    if (authUser.role === "doctor" || authUser.role === "institute") {
+      if (appointment.patientId) {
+        return typeof appointment.patientId === "string"
+          ? appointment.patientId
+          : appointment.patientId._id;
+      }
+    }
 
-        console.log(`Appointment ${appointment._id}: Filing complaint`, { complaint });
+    return null;
+  };
 
-        try {
-            setReportLoading(true);
-            const API_URL = import.meta.env.VITE_API_URL || "";
-            const res = await axios.post(
-                `${API_URL}/api/booking/report/${appointment._id}`,
-                { complaint },
-                { withCredentials: true }
-            );
-            console.log(`Appointment ${appointment._id}: Success -`, res.data.message);
-            setIsReporting(false);
-            setComplaint("");
-        } catch (err) {
-            console.error(
-                `Appointment ${appointment._id}: Error filing complaint -`,
-                err.response?.data?.message || err.message
-            );
-        } finally {
-            setReportLoading(false);
-        }
+  // Get display name for who user is chatting with
+  const getChatRecipientName = () => {
+    if (!authUser) return "";
+
+    if (authUser.role === "user") {
+      // User chatting with doctor/institute
+      if (doctor) {
+        return `Dr. ${doctor.firstName} ${doctor.lastName}`;
+      }
+      if (institute) {
+        return institute.facilityName || "Institute";
+      }
+      return "Provider";
+    }
+
+    if (authUser.role === "doctor" || authUser.role === "institute") {
+      // Doctor/Institute chatting with patient
+      if (patient) {
+        return `${patient.firstName} ${patient.lastName}`;
+      }
+      return "Patient";
+    }
+
+    return "Recipient";
+  };
+
+  const handleMessageClick = () => {
+    const recipientId = getChatRecipientId();
+    if (recipientId) {
+      navigate(`/chat/${recipientId}`);
+    } else {
+      setError("Unable to start chat - recipient information not available");
+    }
+  };
+
+  const getStatusBadge = (status) => {
+    const statusColors = {
+      pending_accept: "badge-warning",
+      awaiting_deposit: "badge-info",
+      booked: "badge-primary",
+      confirmed: "badge-success",
+      ongoing: "badge-secondary",
+      marked_complete: "badge-accent",
+      completed: "badge-success",
+      fully_paid: "badge-primary",
+      confirm_fully_paid: "badge-success",
+      cancelled_unpaid: "badge-error",
+      cancelled: "badge-error",
+      rejected: "badge-error",
+      no_show_patient: "badge-error",
+      no_show_doctor: "badge-error",
+      no_show_both: "badge-error",
+      freeze: "badge-neutral",
     };
 
     return (
-        <div className="card bg-base-200 shadow-sm mb-3">
-            <div className="card-body p-4">
-                <div className="flex justify-between items-start">
-                    <div className="flex-1 cursor-pointer" onClick={() => onViewDetails(appointment)}>
-                        <div className="flex justify-between items-start mb-2">
-                            <h3 className="font-semibold text-lg">
-                                Appointment #{appointment._id?.slice(-6) || 'N/A'}
-                            </h3>
-                            {getStatusBadge(appointment.status)}
-                        </div>
-
-                        <div className="space-y-1">
-                            <p className="text-sm"><strong>Date:</strong> {date}</p>
-                            <p className="text-sm"><strong>Time:</strong> {time}</p>
-                            <p className="text-sm">
-                                <strong>Duration:</strong>{" "}
-                                {Math.round((new Date(appointment.end) - new Date(appointment.start)) / (1000 * 60))} minutes
-                            </p>
-
-                            {appointment.patientId && (
-                                <p className="text-sm">
-                                    <strong>Patient:</strong> {appointment.patientId.firstName} {appointment.patientId.lastName}
-                                </p>
-                            )}
-
-                            {appointment.amount && (
-                                <p className="text-sm"><strong>Amount:</strong> ₱{appointment.amount}</p>
-                            )}
-
-                            <p className="text-sm"><strong>Payment:</strong> {getPaymentStatus()}</p>
-                        </div>
-                    </div>
-
-                    <div className="flex flex-col gap-2 ml-4">
-                        <button
-                            className="btn btn-info btn-sm"
-                            onClick={() => onViewDetails(appointment)}
-                        >
-                            View
-                        </button>
-
-                        <button
-                            className="btn btn-error btn-sm"
-                            onClick={() => setIsReporting(true)}
-                        >
-                            Report
-                        </button>
-                    </div>
-                </div>
-
-                {error && (
-                    <div className="alert alert-error mt-2">
-                        <span>{error}</span>
-                    </div>
-                )}
-
-                {/* Report Modal */}
-                {isReporting && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                        <div className="bg-base-100 p-4 rounded w-96">
-                            <h4 className="font-semibold mb-2">File Complaint</h4>
-                            <textarea
-                                className="textarea textarea-bordered w-full mb-2"
-                                rows={4}
-                                placeholder="Enter your complaint"
-                                value={complaint}
-                                onChange={(e) => setComplaint(e.target.value)}
-                            />
-                            <div className="flex justify-end gap-2">
-                                <button
-                                    className="btn btn-sm"
-                                    onClick={() => setIsReporting(false)}
-                                    disabled={reportLoading}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    className="btn btn-error btn-sm"
-                                    onClick={handleReport}
-                                    disabled={reportLoading}
-                                >
-                                    {reportLoading ? "Submitting..." : "Submit"}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
-        </div>
+      <span className={`badge ${statusColors[status] || "badge-ghost"}`}>
+        {status.replace(/_/g, " ").toUpperCase()}
+      </span>
     );
+  };
+
+  const formatDateTime = (dateString) => {
+    const date = new Date(dateString);
+    return {
+      date: date.toLocaleDateString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }),
+      time: date.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    };
+  };
+
+  const { date, time } = formatDateTime(appointment.start);
+
+  const getPaymentStatus = () => {
+    if (appointment.balancePaid) return "Fully Paid ✓";
+    if (appointment.depositPaid) return "Deposit Paid (Pending Full Payment)";
+    return "Pending Payment";
+  };
+
+  const handleReport = async () => {
+    if (!complaint.trim()) return;
+
+    setReportLoading(true);
+    setError(null);
+
+    try {
+      await axios.post(
+        `http://localhost:5001/api/appointments/${appointment._id}/report`,
+        { complaint: complaint.trim() },
+        { withCredentials: true }
+      );
+
+      alert("Report submitted successfully");
+      setIsReporting(false);
+      setComplaint("");
+    } catch (err) {
+      console.error("Error reporting:", err);
+      setError(err.response?.data?.message || "Failed to submit report");
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
+  const recipientId = getChatRecipientId();
+  const recipientName = getChatRecipientName();
+
+  // Check if video call button should show
+  const showVideoButton = appointment.status === "ongoing" && appointment.videoCallLink;
+  
+  console.log("Show Video Button?", showVideoButton); // DEBUG
+
+  return (
+    <div className="card bg-base-100 shadow-lg">
+      <div className="card-body">
+        {/* Status Badge */}
+        <div className="flex justify-between items-start">
+          <h3 className="card-title">
+            Appointment with {recipientName}
+          </h3>
+          {getStatusBadge(appointment.status)}
+        </div>
+
+        {/* Appointment Details */}
+        <div className="space-y-2 text-sm">
+          <p>
+            <strong>Date:</strong> {date}
+          </p>
+          <p>
+            <strong>Time:</strong> {time}
+          </p>
+          <p>
+            <strong>Duration:</strong>{" "}
+            {Math.round(
+              (new Date(appointment.end) - new Date(appointment.start)) /
+                (1000 * 60)
+            )}{" "}
+            minutes
+          </p>
+          <p>
+            <strong>Amount:</strong> ₱{appointment.amount}
+          </p>
+          <p>
+            <strong>Payment:</strong> {getPaymentStatus()}
+          </p>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="card-actions justify-end mt-4 gap-2">
+          {/* Video Call Button - Shows when appointment is ongoing */}
+          {showVideoButton && (
+            <a
+              href={appointment.videoCallLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-sm btn-outline gap-2"
+            >
+              Join Video Call
+            </a>
+          )}
+
+          {/* Message Button */}
+          <button
+            className="btn btn-sm btn-primary"
+            onClick={handleMessageClick}
+            disabled={!recipientId}
+          >
+            Message {authUser?.role === "user" ? "Provider" : "Patient"}
+          </button>
+
+          {/* View Details Button */}
+          <button
+            className="btn btn-sm btn-primary"
+            onClick={() => onViewDetails(appointment)}
+          >
+            View Details
+          </button>
+
+          {/* Report Button */}
+          <button
+            className="btn btn-sm btn-error"
+            onClick={() => setIsReporting(true)}
+          >
+            Report Issue
+          </button>
+        </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="alert alert-error mt-4">
+            <span>{error}</span>
+          </div>
+        )}
+
+        {/* Report Modal */}
+        {isReporting && (
+          <div className="modal modal-open">
+            <div className="modal-box">
+              <h3 className="font-bold text-lg mb-4">Report Issue</h3>
+              <textarea
+                className="textarea textarea-bordered w-full"
+                placeholder="Describe the issue..."
+                value={complaint}
+                onChange={(e) => setComplaint(e.target.value)}
+                rows={4}
+              />
+              <div className="modal-action">
+                <button
+                  className="btn btn-ghost"
+                  onClick={() => {
+                    setIsReporting(false);
+                    setComplaint("");
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="btn btn-error"
+                  onClick={handleReport}
+                  disabled={reportLoading || !complaint.trim()}
+                >
+                  {reportLoading ? "Submitting..." : "Submit Report"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 };
 
 export default PendingAppointment;
