@@ -3,7 +3,6 @@ import { useParams } from "react-router";
 import useAuthUser from "../hooks/useAuthUser";
 import { useQuery } from "@tanstack/react-query";
 import { getStreamToken } from "../lib/api";
-
 import {
   Channel,
   ChannelHeader,
@@ -22,90 +21,93 @@ import CallButton from "../components/CallButton";
 const STREAM_API_KEY = import.meta.env.VITE_STREAM_API_KEY;
 
 const ChatPage = () => {
-	const { id:targetUserId } = useParams();
-	
-	const [chatClient, setChatClient] = useState(null);
-	const [channel, setChannel] = useState(null);
-	const [loading, setLoading] = useState(true);
+    const { id: targetUserId } = useParams();
+    
+    const [chatClient, setChatClient] = useState(null);
+    const [channel, setChannel] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-	const {authUser} = useAuthUser();
+    const { authUser } = useAuthUser();
 
-	const {data:tokenData} = useQuery({
-		queryKey:["streamToken"],
-		queryFn: getStreamToken,
-		enabled: !!authUser // run only when authUser is available
-	});
+    const { data: tokenData } = useQuery({
+        queryKey: ["streamToken"],
+        queryFn: getStreamToken,
+        enabled: !!authUser // run only when authUser is available
+    });
 
-	useEffect(() => {
-		const initChat = async () => {
-			if(!tokenData?.token || !authUser) return;
+    useEffect(() => {
+        const initChat = async () => {
+            if (!tokenData?.token || !authUser) return;
 
-			try {
-				console.log("Initializing stream chat client...")
+            try {
+                console.log("Initializing stream chat client...")
 
-				const client = StreamChat.getInstance(STREAM_API_KEY)
+                const client = StreamChat.getInstance(STREAM_API_KEY)
 
-				await client.connectUser({
-					id: authUser._id,
-					name: authUser.fullName,
-					image: authUser.profilePic,
-				}, tokenData.token)
-				
-				//create same channel for both users
-				const channelId = [authUser._id, targetUserId].sort().join("-");
+                await client.connectUser({
+                    id: authUser._id,
+                    name: authUser.fullName,
+                    image: authUser.profilePic,
+                }, tokenData.token)
+                
+                // Create same channel for both users
+                const channelId = [authUser._id, targetUserId].sort().join("-");
 
-				const currChannel = client.channel("messaging", channelId, {
-					members: [authUser._id, targetUserId],
-				})
+                const currChannel = client.channel("messaging", channelId, {
+                    members: [authUser._id, targetUserId],
+                })
 
-				await currChannel.watch();
+                await currChannel.watch();
 
-				setChatClient(client);
-				setChannel(currChannel);
+                setChatClient(client);
+                setChannel(currChannel);
 
-			} catch (error) {
-				console.error("Error initializing chat:", error);
-				toast.error("Could not connect to chat. Please try again.");	
-			
-			} finally {
-				setLoading(false);
-			}
-		}
-		
-		initChat()
-	},[tokenData, authUser, targetUserId]);
+            } catch (error) {
+                console.error("Error initializing chat:", error);
+                toast.error("Could not connect to chat. Please try again.");    
+            
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        initChat()
+    }, [tokenData, authUser, targetUserId]);
 
-	const handleVideoCall = () => {
-		if(channel) {
-			const callUrl = `${window.location.origin}/call/${channel.id}`
+    const handleVideoCall = () => {
+        if (channel) {
+            const callUrl = `${window.location.origin}/call/${channel.id}`
 
-			channel.sendMessage({
-				text: `I've started a meeting. Join me here: ${callUrl}`,
-			})
+            channel.sendMessage({
+                text: `I've started a meeting. Join me here: ${callUrl}`,
+            })
 
-			toast.success("Meeting link sent successfully");
-		}
-	}
+            toast.success("Meeting link sent successfully");
+        }
+    }
 
-	if (loading || !chatClient || !channel) return <ChatLoader />;
+    if (loading || !chatClient || !channel) return <ChatLoader />;
 
-	return (
-	<div className="h-[93vh]">
-		<Chat client={chatClient}>
-			<Channel channel={channel}>
-				<div className="w-full relative">
-					<CallButton handleVideoCall={handleVideoCall}/>
-					<Window>
-						<ChannelHeader />
-						<MessageList />
-						<MessageInput focus />
-					</Window>
-				</div>
-				<Thread />
-			</Channel>	
-		</Chat>
-	</div>
-	)
+    return (
+        <div className="h-[93vh]">
+            <Chat client={chatClient}>
+                <Channel channel={channel}>
+                    <div className="w-full relative">
+                        {/* Only show CallButton if user is a doctor */}
+                        {authUser?.role === "doctor" && (
+                            <CallButton handleVideoCall={handleVideoCall} />
+                        )}
+                        <Window>
+                            <ChannelHeader />
+                            <MessageList />
+                            <MessageInput focus />
+                        </Window>
+                    </div>
+                    <Thread />
+                </Channel>  
+            </Chat>
+        </div>
+    )
 };
 
 export default ChatPage;

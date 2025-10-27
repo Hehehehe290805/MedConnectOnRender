@@ -1,353 +1,328 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import toast from "react-hot-toast"; // ✅ ADD THIS IMPORT
 
 const ViewPendingAppointmentPatientPopup = ({ appointment, onClose }) => {
-    const [doctor, setDoctor] = useState(null);
-    const [gcashRef, setGcashRef] = useState("");
-    const [balanceRef, setBalanceRef] = useState("");
-    const [qrUrl, setQrUrl] = useState(null);
-    const [rating, setRating] = useState(0);
-    const [review, setReview] = useState("");
-    const [loading, setLoading] = useState(false);
+  const [doctor, setDoctor] = useState(null);
+  const [gcashRef, setGcashRef] = useState("");
+  const [balanceRef, setBalanceRef] = useState("");
+  const [qrUrl, setQrUrl] = useState(null);
+  const [rating, setRating] = useState(0);
+  const [review, setReview] = useState("");
+  const [loading, setLoading] = useState(false);
 
-    const handleBalanceRefChange = (e) => setBalanceRef(e.target.value);
+  const handleBalanceRefChange = (e) => setBalanceRef(e.target.value);
+  const API_URL = import.meta.env.VITE_API_URL || "";
 
-    const API_URL = import.meta.env.VITE_API_URL || "";
+  useEffect(() => {
+    const fetchDoctor = async () => {
+      if (!appointment.doctorId) return;
 
-    useEffect(() => {
-        const fetchDoctor = async () => {
-            if (!appointment.doctorId) return;
+      try {
+        const doctorIdStr = typeof appointment.doctorId === "string"
+          ? appointment.doctorId
+          : appointment.doctorId._id || appointment.doctorId.toString();
 
-            try {
-                const doctorIdStr = typeof appointment.doctorId === "string"
-                    ? appointment.doctorId
-                    : appointment.doctorId._id || appointment.doctorId.toString();
+        const res = await axios.get(`${API_URL}/api/users/${doctorIdStr}`, {
+          withCredentials: true
+        });
 
-                const res = await axios.get(`${API_URL}/api/users/${doctorIdStr}`, { withCredentials: true });
-                setDoctor(res.data.data); // assume API returns { user: {...} }
+        setDoctor(res.data.data);
 
-                // Fetch GCash QR if available
-                if (res.data.data.gcash?.qrData) {
-                    setQrUrl(`${API_URL}/api/gcash-setup/gcash/qr/${doctorIdStr}`);
-                }
-            } catch (err) {
-                console.error("Failed to fetch doctor info:", err);
-            }
-        };
-
-        fetchDoctor();
-    }, [appointment.doctorId]);
-
-    const formatDateTime = (dateString) => {
-        const date = new Date(dateString);
-        return {
-            date: date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-            time: date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-            day: date.toLocaleDateString('en-US', { weekday: 'long' }),
-        };
-    };
-
-    const getDuration = () => {
-        const start = new Date(appointment.start);
-        const end = new Date(appointment.end);
-        return Math.round((end - start) / (1000 * 60));
-    };
-
-    const handlePayDeposit = async () => {
-        if (!gcashRef.trim()) {
-            alert("Please enter your GCash reference number");
-            return;
+        // Fetch GCash QR if available
+        if (res.data.data.gcash?.qrData) {
+          setQrUrl(`${API_URL}/api/gcash-setup/gcash/qr/${doctorIdStr}`);
         }
-
-        try {
-            const API_URL = import.meta.env.VITE_API_URL || "";
-            const res = await axios.post(
-                `${API_URL}/api/booking/pay-deposit`,
-                {
-                    appointmentId: appointment._id,
-                    referenceNumber: gcashRef,
-                },
-                { withCredentials: true } // to send cookies / session info if protected
-            );
-
-            if (res.data.success) {
-                alert(res.data.message);
-                // Optionally, update the local appointment state to reflect new status
-                appointment.status = "booked";
-            }
-            onClose();
-        } catch (err) {
-            console.error("Error paying deposit:", err);
-            alert(err.response?.data?.message || "Failed to pay deposit");
-        }
+      } catch (err) {
+        console.error("Failed to fetch doctor info:", err);
+        toast.error("Failed to load doctor information"); // ✅ TOAST
+      }
     };
 
+    fetchDoctor();
+  }, [appointment.doctorId]);
 
-    const renderActions = () => {
-        switch (appointment.status) {
-            case "awaiting_deposit":
-                return (
-                    <div className="flex flex-col gap-2 mt-6">
-                        {qrUrl && (
-                            <div className="flex flex-col items-center mb-2">
-                                <p className="mb-2 text-center font-medium">
-                                    Scan the QRCode and provide the reference number
-                                </p>
-                                <img src={qrUrl} alt="Doctor GCash QR" className="w-48 h-48" />
-                            </div>
-                        )}
-                        <input
-                            type="text"
-                            placeholder="Enter GCash reference number"
-                            value={gcashRef}
-                            onChange={(e) => setGcashRef(e.target.value)}
-                            className="input input-bordered w-full max-w-xs"
-                        />
-                        <button
-                            className="btn btn-primary btn-sm"
-                            onClick={handlePayDeposit}
-                        >
-                            Pay Deposit
-                        </button>
-                    </div>
-                );
-            case "ongoing":
-                return (
-                    <div className="flex gap-2 mt-6">
-                        <button
-                            className="btn btn-success btn-sm"
-                            onClick={async () => {
-                                try {
-                                    const API_URL = import.meta.env.VITE_API_URL || "";
-                                    const res = await axios.post(
-                                        `${API_URL}/api/booking/attend/${appointment._id}`, // <-- send as URL param
-                                        {}, // body can be empty
-                                        { withCredentials: true }
-                                    );
-
-
-                                    alert(res.data.message);
-                                    // Optionally update local state to reflect attendance
-                                    if (res.data.appointment) {
-                                        appointment.patientPresent = res.data.appointment.patientPresent;
-                                        appointment.doctorPresent = res.data.appointment.doctorPresent;
-                                        appointment.status = res.data.appointment.status;
-                                    }
-                                } catch (err) {
-                                    console.error("Error marking attendance:", err);
-                                    alert(err.response?.data?.message || "Failed to mark attendance");
-                                }
-                            }}
-                        >
-                            Mark Attendance
-                        </button>
-                    </div>
-                );
-            case "marked_complete":
-                return (
-                    <div className="flex gap-2 mt-6">
-                        <button
-                            className="btn btn-success btn-sm"
-                            onClick={async () => {
-                                try {
-                                    const API_URL = import.meta.env.VITE_API_URL || "";
-                                    const res = await axios.post(
-                                        `${API_URL}/api/booking/complete-appointment`,
-                                        { appointmentId: appointment._id },
-                                        { withCredentials: true }
-                                    );
-
-                                    if (res.data.success) {
-                                        alert(res.data.message);
-                                    }
-                                    onClose();
-                                } catch (err) {
-                                    console.error("Error completing appointment:", err);
-                                    alert(err.response?.data?.message || "Failed to mark appointment as completed");
-                                }
-                            }}
-                        >
-                            Confirm Completion
-                        </button>
-                    </div>
-                );
-
-            case "completed":
-                return (
-                    <div className="flex flex-col gap-2 mt-6">
-                        {/* QR Code Section */}
-                        {qrUrl && (
-                            <div className="flex flex-col items-center mb-2">
-                                <p className="mb-2 text-center font-medium">
-                                    Scan the QRCode and provide the reference number for balance payment
-                                </p>
-                                <img src={qrUrl} alt="Balance Payment QR" className="w-48 h-48" />
-                            </div>
-                        )}
-
-                        {/* Balance Payment Input */}
-                        <label className="font-semibold">Balance Payment Reference</label>
-                        <input
-                            type="text"
-                            placeholder="Enter balance payment reference"
-                            className="input input-bordered w-full"
-                            value={balanceRef}
-                            onChange={handleBalanceRefChange}
-                            disabled={loading}
-                        />
-                        <button
-                            className="btn btn-success w-full"
-                            onClick={async () => {
-                                if (!balanceRef.trim()) {
-                                    alert("Payment reference is required");
-                                    return;
-                                }
-                                try {
-                                    const API_URL = import.meta.env.VITE_API_URL || "";
-                                    const res = await axios.post(
-                                        `${API_URL}/api/booking/pay-remaining`,
-                                        {
-                                            appointmentId: appointment._id,
-                                            referenceNumber: balanceRef.trim()
-                                        },
-                                        { withCredentials: true }
-                                    );
-
-                                    if (res.data.success) {
-                                        alert(res.data.message);
-                                        setBalanceRef(""); // Clear input after successful payment
-                                    }
-                                    onClose();
-                                } catch (err) {
-                                    console.error("Error paying balance:", err);
-                                    alert(err.response?.data?.message || "Failed to pay remaining balance");
-                                }
-                            }}
-                            disabled={loading || !balanceRef.trim()}
-                        >
-                            {loading ? "Processing..." : "Pay Balance"}
-                        </button>
-                        <p className="text-xs text-gray-500 mt-1">
-                            Please enter the reference number from your balance payment
-                        </p>
-                    </div>
-                );
-
-            case "confirm_fully_paid":
-                return (
-                    <div className="flex flex-col gap-2 mt-6">
-                        <p className="font-semibold">Submit your review for this appointment:</p>
-
-                        <label className="font-medium">Rating (1-5)</label>
-                        <input
-                            type="number"
-                            min={1}
-                            max={5}
-                            className="input input-bordered w-full max-w-xs"
-                            value={rating}
-                            onChange={(e) => setRating(Number(e.target.value))}
-                            disabled={loading}
-                        />
-
-                        <label className="font-medium">Review</label>
-                        <textarea
-                            className="textarea textarea-bordered w-full max-w-md"
-                            placeholder="Write your review here..."
-                            value={review}
-                            onChange={(e) => setReview(e.target.value)}
-                            disabled={loading}
-                        />
-
-                        <button
-                            className="btn btn-primary btn-sm mt-2 w-36"
-                            onClick={async () => {
-                                if (!rating || rating < 1 || rating > 5) {
-                                    alert("Please provide a rating between 1 and 5");
-                                    return;
-                                }
-
-                                try {
-                                    const API_URL = import.meta.env.VITE_API_URL || "";
-                                    setLoading(true);
-
-                                    const res = await axios.post(
-                                        `${API_URL}/api/booking/submit-review`,
-                                        {
-                                            appointmentId: appointment._id,
-                                            rating,
-                                            review
-                                        },
-                                        { withCredentials: true }
-                                    );
-
-                                    alert(res.data.message);
-
-                                    // Update local state if callback exists
-                                    if (onAppointmentUpdated) {
-                                        onAppointmentUpdated(appointment._id, "review_submitted");
-                                    }
-
-                                    // Clear input after submission
-                                    setRating(0);
-                                    setReview("");
-                                } catch (err) {
-                                } finally {
-                                    setLoading(false);
-                                }
-                            }}
-                            disabled={loading}
-                        >
-                            {loading ? "Submitting..." : "Submit Review"}
-                        </button>
-                    </div>
-                );
-
-
-            default:
-                return null; // read-only
-        }
+  const formatDateTime = (dateString) => {
+    const date = new Date(dateString);
+    return {
+      date: date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }),
+      time: date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit'
+      }),
+      day: date.toLocaleDateString('en-US', { weekday: 'long' }),
     };
+  };
 
-    const { date, time, day } = formatDateTime(appointment.start);
+  const getDuration = () => {
+    const start = new Date(appointment.start);
+    const end = new Date(appointment.end);
+    return Math.round((end - start) / (1000 * 60));
+  };
 
-    return (
-        <div className="modal modal-open">
-            <div className="modal-box max-w-4xl max-h-[90vh] overflow-y-auto relative">
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold">Appointment Details</h2>
-                    <button className="btn btn-circle btn-ghost" onClick={onClose}>✕</button>
-                </div>
+  const handlePayDeposit = async () => {
+    if (!gcashRef.trim()) {
+      toast.error("Please enter your GCash reference number"); // ✅ TOAST
+      return;
+    }
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div>
-                        <h3 className="font-semibold mb-2">Appointment Info</h3>
-                        <p>Day: {day}</p>
-                        <p>Date: {date}</p>
-                        <p>Time: {time}</p>
-                        <p>Duration: {getDuration()} minutes</p>
-                        <p>Deposit Price: ₱{appointment.paymentDeposit}</p>
-                        <p>Remaining Price: ₱{appointment.balanceAmount}</p>
-                    </div>
+    try {
+      setLoading(true);
+      const res = await axios.post(
+        `${API_URL}/api/booking/pay-deposit`,
+        {
+          appointmentId: appointment._id,
+          referenceNumber: gcashRef,
+        },
+        { withCredentials: true }
+      );
 
-                    <div>
-                        <h3 className="font-semibold mb-2">Doctor Info</h3>
-                        {doctor ? (
-                            <>
-                                <p>Dr. {doctor.firstName} {doctor.lastName}</p>
-                                {doctor.specialization && <p>Specialization: {doctor.specialization}</p>}
-                            </>
-                        ) : (
-                            <p>Loading doctor information...</p>
-                        )}
-                    </div>
-                </div>
+      if (res.data.success) {
+        toast.success(res.data.message || "Deposit payment submitted successfully"); // ✅ TOAST
+        appointment.status = "booked";
+        setTimeout(() => onClose(), 1500);
+      }
+    } catch (err) {
+      console.error("Error paying deposit:", err);
+      toast.error(err.response?.data?.message || "Failed to pay deposit"); // ✅ TOAST
+    } finally {
+      setLoading(false);
+    }
+  };
 
-                {renderActions()}
+  const handlePayBalance = async () => {
+    if (!balanceRef.trim()) {
+      toast.error("Please enter your GCash reference number for balance payment"); // ✅ TOAST
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await axios.post(
+        `${API_URL}/api/booking/pay-balance`,
+        {
+          appointmentId: appointment._id,
+          referenceNumber: balanceRef,
+        },
+        { withCredentials: true }
+      );
+
+      if (res.data.success) {
+        toast.success(res.data.message || "Balance payment submitted successfully"); // ✅ TOAST
+        appointment.status = "fully_paid";
+        setTimeout(() => onClose(), 1500);
+      }
+    } catch (err) {
+      console.error("Error paying balance:", err);
+      toast.error(err.response?.data?.message || "Failed to pay balance"); // ✅ TOAST
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (!rating) {
+      toast.error("Please select a rating"); // ✅ TOAST
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await axios.post(
+        `${API_URL}/api/booking/review`,
+        {
+          appointmentId: appointment._id,
+          rating,
+          review: review.trim() || "",
+        },
+        { withCredentials: true }
+      );
+
+      if (res.data.success) {
+        toast.success("Review submitted successfully"); // ✅ TOAST
+        setTimeout(() => onClose(), 1500);
+      }
+    } catch (err) {
+      console.error("Error submitting review:", err);
+      toast.error(err.response?.data?.message || "Failed to submit review"); // ✅ TOAST
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderActions = () => {
+    const { day, date, time } = formatDateTime(appointment.start);
+
+    switch (appointment.status) {
+      case "awaiting_deposit":
+        return (
+          <>
+            <div className="alert alert-info mb-4">
+              <span>Scan the QRCode and provide the reference number</span>
             </div>
 
-            <div className="modal-backdrop" onClick={onClose}></div>
+            {qrUrl && (
+              <div className="flex justify-center mb-4">
+                <img src={qrUrl} alt="GCash QR" className="w-48 h-48" />
+              </div>
+            )}
+
+            <input
+              type="text"
+              placeholder="Enter GCash Reference Number"
+              className="input input-bordered w-full mb-4"
+              value={gcashRef}
+              onChange={(e) => setGcashRef(e.target.value)}
+              disabled={loading}
+            />
+
+            <button
+              className="btn btn-primary btn-block"
+              onClick={handlePayDeposit}
+              disabled={loading || !gcashRef.trim()}
+            >
+              {loading ? "Processing..." : "Submit Deposit Payment"}
+            </button>
+          </>
+        );
+
+      case "confirmed":
+        return (
+          <>
+            <div className="alert alert-info mb-4">
+              <span>Scan the QRCode and provide the reference number for balance payment</span>
+            </div>
+
+            {qrUrl && (
+              <div className="flex justify-center mb-4">
+                <img src={qrUrl} alt="GCash QR" className="w-48 h-48" />
+              </div>
+            )}
+
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text">Please enter the reference number from your balance payment</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Enter GCash Reference Number"
+                className="input input-bordered w-full"
+                value={balanceRef}
+                onChange={handleBalanceRefChange}
+                disabled={loading}
+              />
+            </div>
+
+            <button
+              className="btn btn-primary btn-block"
+              onClick={handlePayBalance}
+              disabled={loading || !balanceRef.trim()}
+            >
+              {loading ? "Processing..." : "Submit Balance Payment"}
+            </button>
+          </>
+        );
+
+      case "completed":
+        return (
+          <>
+            <div className="alert alert-success mb-4">
+              <span>Submit your review for this appointment:</span>
+            </div>
+
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text">Rating (1-5)</span>
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="5"
+                className="input input-bordered"
+                value={rating}
+                onChange={(e) => setRating(Number(e.target.value))}
+                disabled={loading}
+              />
+            </div>
+
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text">Review (optional)</span>
+              </label>
+              <textarea
+                className="textarea textarea-bordered"
+                placeholder="Write your review..."
+                value={review}
+                onChange={(e) => setReview(e.target.value)}
+                disabled={loading}
+                rows={4}
+              />
+            </div>
+
+            <button
+              className="btn btn-primary btn-block"
+              onClick={handleSubmitReview}
+              disabled={loading || !rating}
+            >
+              {loading ? "Submitting..." : "Submit Review"}
+            </button>
+          </>
+        );
+
+      default:
+        return (
+          <div className="alert alert-info">
+            <span>Status: {appointment.status}</span>
+          </div>
+        );
+    }
+  };
+
+  const { day, date, time } = formatDateTime(appointment.start);
+
+  return (
+    <div className="modal modal-open">
+      <div className="modal-box max-w-2xl">
+        <h2 className="text-lg font-bold mb-4">Appointment Details</h2>
+
+        {/* Doctor Info */}
+        <div className="mb-4">
+          {doctor ? (
+            <>
+              <h3 className="font-semibold">Dr. {doctor.firstName} {doctor.lastName}</h3>
+              {doctor.specialization && <p>Specialization: {doctor.specialization}</p>}
+            </>
+          ) : (
+            <p>Loading doctor information...</p>
+          )}
         </div>
-    );
+
+        {/* Appointment Info */}
+        <div className="space-y-2 mb-4 text-sm">
+          <p><strong>Day:</strong> {day}</p>
+          <p><strong>Date:</strong> {date}</p>
+          <p><strong>Time:</strong> {time}</p>
+          <p><strong>Duration:</strong> {getDuration()} minutes</p>
+          <p><strong>Deposit Price:</strong> ₱{appointment.paymentDeposit}</p>
+          <p><strong>Remaining Price:</strong> ₱{appointment.balanceAmount}</p>
+        </div>
+
+        {/* Actions */}
+        {renderActions()}
+
+        {/* Close Button */}
+        <div className="modal-action">
+          <button className="btn" onClick={onClose} disabled={loading}>
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default ViewPendingAppointmentPatientPopup;

@@ -11,7 +11,12 @@ const AppointmentSchema = new mongoose.Schema({
   // Schedule
   start: { type: Date, required: true },
   end: { type: Date, required: true },
-
+  
+  videoCallLink: { 
+    type: String,
+    default: null 
+  },
+  
   // Status tracking
   status: {
     type: String,
