@@ -190,7 +190,7 @@ const PendingAppointment = ({ appointment, onAppointmentUpdated, onViewDetails }
 
     try {
       await axios.post(
-        `http://localhost:5001/api/appointments/${appointment._id}/report`,
+        `${API_URL}/api/booking/report/${appointment._id}`,
         { complaint: complaint.trim() },
         { withCredentials: true }
       );
@@ -205,6 +205,7 @@ const PendingAppointment = ({ appointment, onAppointmentUpdated, onViewDetails }
       setReportLoading(false);
     }
   };
+
 
   const recipientId = getChatRecipientId();
   const recipientName = getChatRecipientName();

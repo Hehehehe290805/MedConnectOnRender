@@ -12,17 +12,23 @@ const PendingReport = ({ report, onViewDetails }) => {
             try {
                 setLoading(true);
 
-                const [reportedRes, reporterRes] = await Promise.all([
-                    report.filedAgainst
-                        ? axios.get(`/api/users/${report.filedAgainst}`)
-                        : Promise.resolve({ data: { firstName: "Unknown", lastName: "" } }),
-                    report.filedBy
-                        ? axios.get(`/api/users/${report.filedBy}`)
-                        : Promise.resolve({ data: { firstName: "Unknown", lastName: "" } }),
+                const API_URL = import.meta.env.VITE_API_URL || "";
+
+                // If already populated, use directly; otherwise fetch by ID
+                const getUser = async (user) => {
+                    if (!user) return { firstName: "Unknown", lastName: "", facilityName: null };
+                    if (typeof user === "object" && user.firstName) return user;
+                    const res = await axios.get(`${API_URL}/api/users/${user}`, { withCredentials: true });
+                    return res.data.data; // adjust if your response shape is different
+                };
+
+                const [reported, reporter] = await Promise.all([
+                    getUser(report.filedAgainst),
+                    getUser(report.filedBy)
                 ]);
 
-                setReportedUser(reportedRes.data);
-                setReporterUser(reporterRes.data);
+                setReportedUser(reported);
+                setReporterUser(reporter);
             } catch (err) {
                 console.error(err);
                 setError("Failed to load user info");
@@ -34,11 +40,13 @@ const PendingReport = ({ report, onViewDetails }) => {
         fetchUsers();
     }, [report.filedBy, report.filedAgainst]);
 
-    const formatDate = (dateString) =>
-        new Date(dateString).toLocaleDateString();
+    const formatDate = (dateString) => new Date(dateString).toLocaleDateString();
 
     if (loading) return <div className="p-2">Loading report...</div>;
     if (error) return <div className="alert alert-error">{error}</div>;
+
+    const reporterName = reporterUser?.facilityName || `${reporterUser?.firstName} ${reporterUser?.lastName}`;
+    const reportedName = reportedUser?.facilityName || `${reportedUser?.firstName} ${reportedUser?.lastName}`;
 
     return (
         <div className="card bg-base-200 shadow-sm mb-3">
@@ -49,29 +57,18 @@ const PendingReport = ({ report, onViewDetails }) => {
                             Report #{report._id?.slice(-6) || "N/A"}
                         </h3>
                         <div className="flex flex-wrap gap-2 mt-2">
-                            <span className="badge badge-warning">Pending</span>
-                            <span className="badge badge-outline">
-                                Reported: {reporterUser?.facilityName || `${reporterUser?.firstName} ${reporterUser?.lastName}`}
-                            </span>
-                            <span className="badge badge-outline">
-                                Against: {reportedUser?.facilityName || `${reportedUser?.firstName} ${reportedUser?.lastName}`}
-                            </span>
+                            <span className="badge badge-warning">{report.status || "Pending"}</span>
+                            <span className="badge badge-outline">Reported: {reporterName}</span>
+                            <span className="badge badge-outline">Against: {reportedName}</span>
                         </div>
-                        <p className="text-sm opacity-70 mt-1 line-clamp-2">
-                            {report.reason}
-                        </p>
+                        <p className="text-sm opacity-70 mt-1 line-clamp-2">{report.reason}</p>
                         {report.createdAt && (
-                            <p className="text-xs opacity-50 mt-1">
-                                Filed: {formatDate(report.createdAt)}
-                            </p>
+                            <p className="text-xs opacity-50 mt-1">Filed: {formatDate(report.createdAt)}</p>
                         )}
                     </div>
 
                     <div className="flex flex-col gap-2 ml-4">
-                        <button
-                            className="btn btn-info btn-sm"
-                            onClick={() => onViewDetails(report)}
-                        >
+                        <button className="btn btn-info btn-sm" onClick={() => onViewDetails(report)}>
                             View
                         </button>
                     </div>
