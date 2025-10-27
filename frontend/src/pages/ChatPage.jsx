@@ -65,7 +65,7 @@ const ChatPage = () => {
 
 			} catch (error) {
 				console.error("Error initializing chat:", error);
-				toast.error("Could not connect to chat. Please try again.");	
+				toast.error("Could not connect to chat. Pleaste try again.");	
 			
 			} finally {
 				setLoading(false);

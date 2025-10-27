@@ -2,7 +2,7 @@ import express from "express";
 import { 
   getPendingUsers, approveRole, getAdmins,
   getPendingSuggestions, approveSuggestion,
-  getPendingClaims, approveClaim,
+  getPendingClaims, approveClaim, getLicenseNumber,
   viewAllComplaints, viewComplaintByComplaintId, resolveComplaint
   } from "../controllers/admin.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
@@ -20,6 +20,7 @@ router.get("/pending-suggestions", protectRoute, adminOnly, getPendingSuggestion
 router.patch("/approve", protectRoute, adminOnly, approveSuggestion);
 router.get("/pending-claims", protectRoute, adminOnly, getPendingClaims);
 router.patch("/approve-claim", protectRoute, adminOnly, approveClaim);
+router.get("/license/:userId", protectRoute, adminOnly, getLicenseNumber);
 
 // Reports
 router.get("/complaints", protectRoute, adminOnly, viewAllComplaints);

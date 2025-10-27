@@ -13,6 +13,7 @@ const Sidebar = () => {
   // Define which navigation items each role can see
   const canAccessSearch = authUser?.role === "user";
   const canAccessNotifications = authUser?.role === "user";
+  const canAccessSpecialty = authUser?.role === "doctor";
 
   return (
     <aside className="w-64 bg-base-200 border-r border-base-300 hidden lg:flex flex-col h-screen sticky top-0">
@@ -36,6 +37,18 @@ const Sidebar = () => {
           <HomeIcon className="size-5 text-base-content opacity-70" />
           <span>Home</span>
         </Link>
+
+        {/* Search - Only doctors */}
+        {canAccessSpecialty && (
+          <Link
+            to="/specialty"
+            className={`btn btn-ghost justify-start w-full gap-3 px-3 normal-case ${currentPath === "/specialty" ? "btn-active" : ""
+              }`}
+          >
+            <SearchIcon className="size-5 text-base-content opacity-70" />
+            <span>Specialties</span>
+          </Link>
+        )}
 
         {/* Search - Only users */}
         {canAccessSearch && (

@@ -15,6 +15,7 @@ import ChatPage from "./pages/ChatPage.jsx";
 import ProfilePage from "./pages/ProfilePage.jsx";
 import SearchPage from "./pages/SearchPage.jsx";
 import SettingsPage from "./pages/SettingsPage.jsx";
+import SpecialtyPage from "./pages/SpecialtyPage.jsx";
 
 // Onboarding
 import OnboardingUser from "./pages/OnboardingUser.jsx";
@@ -122,7 +123,14 @@ const App = () => {
           <Route path="/notifications" element={
             <ProtectedRoute allowedRoles={["user"]}><NotificationsPage /></ProtectedRoute>
           } />
+          
+          {/* Doctor-only */}
+          <Route path="/specialty" element={
+            <ProtectedRoute allowedRoles={["doctor"]}><SpecialtyPage /></ProtectedRoute>
+          } />
         </Route>
+
+          
 
         {/* Minimal Layout Routes */}
         <Route element={<Layout showSidebar={false} />}>

@@ -1,12 +1,56 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 
 const ViewPendingClaimPopup = ({ claim, onClose, onClaimApproved }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(false);
+    const [licenseNumber, setLicenseNumber] = useState(null);
+    const [licenseLoading, setLicenseLoading] = useState(false);
 
     if (!claim) return null;
+
+    // Fetch license number when component mounts or claim changes
+    useEffect(() => {
+        const fetchLicenseNumber = async () => {
+            if (claim.doctorId) {
+                try {
+                    setLicenseLoading(true);
+                    const API_URL = import.meta.env.VITE_API_URL || "";
+                    const userId = claim.doctorId._id || claim.doctorId;
+
+                    console.log("Fetching license for user:", userId);
+
+                    // Use the new admin license endpoint
+                    const res = await axios.get(
+                        `${API_URL}/api/admin/license/${userId}`, // Note: using /license/:userId
+                        { withCredentials: true }
+                    );
+
+                    console.log("License API response:", res.data);
+
+                    if (res.data.licenseNumber) {
+                        setLicenseNumber(res.data.licenseNumber);
+                    } else {
+                        setLicenseNumber("License number not provided");
+                    }
+                } catch (err) {
+                    console.error("Error fetching license number:", err);
+
+                    // Check if there's a specific error message
+                    if (err.response?.data?.message) {
+                        setLicenseNumber(`Error: ${err.response.data.message}`);
+                    } else {
+                        setLicenseNumber("Unable to fetch license");
+                    }
+                } finally {
+                    setLicenseLoading(false);
+                }
+            }
+        };
+
+        fetchLicenseNumber();
+    }, [claim]);
 
     const handleApprove = async () => {
         try {
@@ -56,16 +100,18 @@ const ViewPendingClaimPopup = ({ claim, onClose, onClaimApproved }) => {
             return {
                 name: `${claim.doctorId.firstName} ${claim.doctorId.lastName}`,
                 email: claim.doctorId.email,
-                type: "Doctor"
+                type: "Doctor",
+                hasLicense: true
             };
         } else if (claim.instituteId) {
             return {
                 name: claim.instituteId.facilityName,
                 email: claim.instituteId.email,
-                type: "Institute"
+                type: "Institute",
+                hasLicense: false
             };
         }
-        return { name: "Unknown User", email: "", type: "Unknown" };
+        return { name: "Unknown User", email: "", type: "Unknown", hasLicense: false };
     };
 
     const getItemInfo = () => {
@@ -90,6 +136,33 @@ const ViewPendingClaimPopup = ({ claim, onClose, onClaimApproved }) => {
 
     const userInfo = getUserInfo();
     const itemInfo = getItemInfo();
+
+    const renderLicenseInfo = () => {
+        if (!userInfo.hasLicense) return null;
+
+        const isLicenseValid = licenseNumber &&
+            !licenseNumber.includes("not provided") &&
+            !licenseNumber.includes("Unable to fetch") &&
+            !licenseNumber.includes("Error:");
+
+        return (
+            <div>
+                <strong>License Number:</strong>
+                <div className="mt-1">
+                    {licenseLoading ? (
+                        <div className="flex items-center gap-2">
+                            <span className="loading loading-spinner loading-xs"></span>
+                            <span className="text-sm text-gray-500">Fetching license...</span>
+                        </div>
+                    ) : (
+                        <p className={`font-mono ${isLicenseValid ? "text-success font-semibold" : "text-warning"}`}>
+                            {licenseNumber || "No license number found"}
+                        </p>
+                    )}
+                </div>
+            </div>
+        );
+    };
 
     const renderClaimDetails = () => {
         return (
@@ -120,6 +193,9 @@ const ViewPendingClaimPopup = ({ claim, onClose, onClaimApproved }) => {
                             )}
                         </div>
                     </div>
+
+                    {/* License Information - Only for doctors */}
+                    {renderLicenseInfo()}
 
                     {/* Additional Details */}
                     {claim.claimType === "subspecialty" && claim.rootSpecialty && (
@@ -184,7 +260,7 @@ const ViewPendingClaimPopup = ({ claim, onClose, onClaimApproved }) => {
                             <button
                                 className="btn btn-success flex-1"
                                 onClick={handleApprove}
-                                disabled={loading}
+                                disabled={loading || licenseLoading}
                             >
                                 {loading ? (
                                     <span className="loading loading-spinner loading-sm"></span>

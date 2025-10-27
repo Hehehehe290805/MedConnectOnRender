@@ -1,49 +1,60 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 
-const PendingReport = ({ report, onViewDetails, onReportResolved }) => {
-    const [loading, setLoading] = useState(false);
+const PendingReport = ({ report, onViewDetails }) => {
+    const [reportedUser, setReportedUser] = useState(null);
+    const [reporterUser, setReporterUser] = useState(null);
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    const getReportedUserInfo = () => {
-        if (report.filedAgainst) {
-            if (report.filedAgainst.facilityName) {
-                return report.filedAgainst.facilityName;
-            } else {
-                return `${report.filedAgainst.firstName} ${report.filedAgainst.lastName}`;
-            }
-        }
-        return "Unknown User";
-    };
+    useEffect(() => {
+        const fetchUsers = async () => {
+            try {
+                setLoading(true);
 
-    const getReporterInfo = () => {
-        if (report.filedBy) {
-            if (report.filedBy.facilityName) {
-                return report.filedBy.facilityName;
-            } else {
-                return `${report.filedBy.firstName} ${report.filedBy.lastName}`;
-            }
-        }
-        return "Unknown User";
-    };
+                const [reportedRes, reporterRes] = await Promise.all([
+                    report.filedAgainst
+                        ? axios.get(`/api/users/${report.filedAgainst}`)
+                        : Promise.resolve({ data: { firstName: "Unknown", lastName: "" } }),
+                    report.filedBy
+                        ? axios.get(`/api/users/${report.filedBy}`)
+                        : Promise.resolve({ data: { firstName: "Unknown", lastName: "" } }),
+                ]);
 
-    const formatDate = (dateString) => {
-        return new Date(dateString).toLocaleDateString();
-    };
+                setReportedUser(reportedRes.data);
+                setReporterUser(reporterRes.data);
+            } catch (err) {
+                console.error(err);
+                setError("Failed to load user info");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchUsers();
+    }, [report.filedBy, report.filedAgainst]);
+
+    const formatDate = (dateString) =>
+        new Date(dateString).toLocaleDateString();
+
+    if (loading) return <div className="p-2">Loading report...</div>;
+    if (error) return <div className="alert alert-error">{error}</div>;
 
     return (
         <div className="card bg-base-200 shadow-sm mb-3">
             <div className="card-body p-4">
                 <div className="flex justify-between items-start">
                     <div className="flex-1 cursor-pointer" onClick={() => onViewDetails(report)}>
-                        <h3 className="font-semibold text-lg">Report #{report._id?.slice(-6) || 'N/A'}</h3>
+                        <h3 className="font-semibold text-lg">
+                            Report #{report._id?.slice(-6) || "N/A"}
+                        </h3>
                         <div className="flex flex-wrap gap-2 mt-2">
                             <span className="badge badge-warning">Pending</span>
                             <span className="badge badge-outline">
-                                Reported: {getReporterInfo()}
+                                Reported: {reporterUser?.facilityName || `${reporterUser?.firstName} ${reporterUser?.lastName}`}
                             </span>
                             <span className="badge badge-outline">
-                                Against: {getReportedUserInfo()}
+                                Against: {reportedUser?.facilityName || `${reportedUser?.firstName} ${reportedUser?.lastName}`}
                             </span>
                         </div>
                         <p className="text-sm opacity-70 mt-1 line-clamp-2">
@@ -65,12 +76,6 @@ const PendingReport = ({ report, onViewDetails, onReportResolved }) => {
                         </button>
                     </div>
                 </div>
-
-                {error && (
-                    <div className="alert alert-error mt-2">
-                        <span>{error}</span>
-                    </div>
-                )}
             </div>
         </div>
     );

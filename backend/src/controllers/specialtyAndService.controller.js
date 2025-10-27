@@ -31,82 +31,77 @@ export async function getSubspecialtiesBySpecialty(req, res) {
     if (!specialtyId) return res.status(400).json({ message: "Specialty ID is required" });
     return fetchHelper(req, res, "subspecialty", { rootSpecialty: specialtyId, status: "verified" });
 }
+export async function getSpecialtyBySubspecialty(req, res) {
+    const { subspecialtyId } = req.params;
+    if (!subspecialtyId) return res.status(400).json({ message: "Subspecialty ID is required" });
+
+    try {
+        // Find the subspecialty and populate the rootSpecialty field
+        const subspecialty = await Subspecialty.findById(subspecialtyId)
+            .populate("rootSpecialty", "name")
+            .lean();
+
+        if (!subspecialty) return res.status(404).json({ message: "Subspecialty not found" });
+
+        if (!subspecialty.rootSpecialty) {
+            return res.status(404).json({ message: "Root specialty not found" });
+        }
+
+        res.status(200).json({ name: subspecialty.rootSpecialty.name });
+    } catch (err) {
+        console.error("Error fetching root specialty:", err);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+}
 export async function getServices(req, res) {
     return fetchHelper(req, res, "service");
 }
 
-export async function getServicesByProvider(req, res) {
+export async function getDoctorSpecialties(req, res) {
     try {
-        const { targetId, targetType } = req.body;
+        const doctorId = req.user._id;
 
-        if (!targetId || !targetType) {
-            return res.status(400).json({
-                success: false,
-                message: "targetId and targetType are required"
-            });
-        }
+        // Fetch all Doctor_Specialty records for this doctor
+        const doctorSpecialties = await Doctor_Specialty.find({ doctorId })
+            .populate("specialtyId", "name")
+            .populate("subspecialtyId", "name rootSpecialty")
+            .lean();
 
-        // Validate targetType
-        const validTypes = ["doctor", "institute"];
-        if (!validTypes.includes(targetType)) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid targetType. Must be 'doctor' or 'institute'"
-            });
-        }
+        // Prepare two groups
+        const pending = [];
+        const verified = [];
 
-        let Model;
-        let filter = { status: "verified" };
-        let populateFields = [];
-        let format = (c) => c;
+        // Loop through each record and use switch-case on status
+        doctorSpecialties.forEach(item => {
+            const mappedItem = {
+                _id: item._id,
+                name: item.subspecialtyId?.name || item.specialtyId?.name || "Unknown",
+                type: item.claimType,
+            };
 
-        switch (targetType) {
-            case "doctor":
-                Model = Doctor_Specialty;
-                filter.doctorId = targetId;
-                populateFields = [
-                    { path: "specialtyId", select: "name" },
-                    { path: "subspecialtyId", select: "name" }
-                ];
-                format = (c) => ({
-                    claimId: c._id,
-                    type: c.subspecialtyId ? "subspecialty" : "specialty",
-                    name: c.subspecialtyId ? c.subspecialtyId.name : c.specialtyId.name
-                });
-                break;
-
-            case "institute":
-                Model = Institute_Service;
-                filter.instituteId = targetId;
-                populateFields = [
-                    { path: "serviceId", select: "name" }
-                ];
-                format = (c) => ({
-                    claimId: c._id,
-                    type: "service",
-                    name: c.serviceId?.name,
-                    durationMinutes: c.durationMinutes
-                });
-                break;
-        }
-
-        let query = Model.find(filter);
-        populateFields.forEach(f => query.populate(f));
-        const results = await query.sort({ createdAt: -1 });
-
-        res.status(200).json({
-            success: true,
-            items: results.map(format)
+            switch (item.status) {
+                case "pending":
+                    pending.push(mappedItem);
+                    break;
+                case "verified":
+                    verified.push(mappedItem);
+                    break;
+                // ignore any other statuses
+            }
         });
 
-    } catch (error) {
-        console.error("Error fetching services:", error);
-        res.status(500).json({
-            success: false,
-            message: "Internal Server Error"
+        // Return grouped results
+        res.json({
+            pending,
+            verified
         });
+
+    } catch (err) {
+        console.error("Error fetching doctor specialties:", err);
+        res.status(500).json({ message: "Internal Server Error" });
     }
 }
+
 
 // Suggest Specialties
 export async function suggest(req, res) {

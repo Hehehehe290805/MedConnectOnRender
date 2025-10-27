@@ -1,10 +1,32 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 
 const ViewPendingSuggestionPopup = ({ suggestion, onClose, onSuggestionApproved }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(false);
+    const [rootSpecialtyName, setRootSpecialtyName] = useState("");
+
+    // Fetch root specialty name if subspecialty
+    useEffect(() => {
+        const fetchRootSpecialtyName = async () => {
+            if (suggestion.type === "subspecialty" && suggestion._id) {
+                try {
+                    const API_URL = import.meta.env.VITE_API_URL || "";
+                    const res = await axios.get(
+                        `${API_URL}/api/specialties-and-services/subspecialty-root/${suggestion._id}`,
+                        { withCredentials: true }
+                    );
+                    setRootSpecialtyName(res.data.name || "Unknown");
+                } catch (err) {
+                    console.error("Failed to fetch root specialty:", err);
+                    setRootSpecialtyName("Unknown");
+                }
+            }
+        };
+
+        fetchRootSpecialtyName();
+    }, [suggestion]);
 
     if (!suggestion) return null;
 
@@ -24,9 +46,7 @@ const ViewPendingSuggestionPopup = ({ suggestion, onClose, onSuggestionApproved 
             if (res.data.message) {
                 setSuccess(true);
                 setTimeout(() => {
-                    if (onSuggestionApproved) {
-                        onSuggestionApproved(suggestion._id);
-                    }
+                    if (onSuggestionApproved) onSuggestionApproved(suggestion._id);
                     onClose();
                 }, 1500);
             }
@@ -40,69 +60,57 @@ const ViewPendingSuggestionPopup = ({ suggestion, onClose, onSuggestionApproved 
 
     const getSuggestionType = () => {
         switch (suggestion.type) {
-            case "specialty":
-                return "Medical Specialty";
-            case "subspecialty":
-                return "Subspecialty";
-            case "service":
-                return "Service";
-            default:
-                return suggestion.type;
+            case "specialty": return "Medical Specialty";
+            case "subspecialty": return "Subspecialty";
+            case "service": return "Service";
+            default: return suggestion.type;
         }
     };
 
-    const renderSuggestionDetails = () => {
-        return (
-            <>
-                <div className="space-y-3">
-                    <div>
-                        <strong>Name:</strong>
-                        <p className="text-lg font-semibold mt-1">{suggestion.name}</p>
-                    </div>
+    const renderSuggestionDetails = () => (
+        <div className="space-y-3">
+            <div>
+                <strong>Name:</strong>
+                <p className="text-lg font-semibold mt-1">{suggestion.name}</p>
+            </div>
 
-                    <div>
-                        <strong>Type:</strong>
-                        <p className="mt-1">
-                            <span className="badge badge-primary">{getSuggestionType()}</span>
-                        </p>
-                    </div>
+            <div>
+                <strong>Type:</strong>
+                <p className="mt-1">
+                    <span className="badge badge-primary">{getSuggestionType()}</span>
+                </p>
+            </div>
 
-                    {suggestion.type === "subspecialty" && suggestion.rootSpecialty && (
-                        <div>
-                            <strong>Root Specialty:</strong>
-                            <p className="mt-1">
-                                {suggestion.rootSpecialty.name || suggestion.rootSpecialty}
-                            </p>
-                        </div>
-                    )}
-
-                    {suggestion.suggestedBy && (
-                        <div>
-                            <strong>Suggested By:</strong>
-                            <p className="mt-1">
-                                {suggestion.suggestedBy.firstName} {suggestion.suggestedBy.lastName}
-                                {suggestion.suggestedBy.email && (
-                                    <span className="text-sm opacity-70 block">
-                                        {suggestion.suggestedBy.email}
-                                    </span>
-                                )}
-                            </p>
-                        </div>
-                    )}
-
-                    {suggestion.createdAt && (
-                        <div>
-                            <strong>Submitted:</strong>
-                            <p className="mt-1">
-                                {new Date(suggestion.createdAt).toLocaleDateString()} at {" "}
-                                {new Date(suggestion.createdAt).toLocaleTimeString()}
-                            </p>
-                        </div>
-                    )}
+            {suggestion.type === "subspecialty" && (
+                <div>
+                    <strong>Root Specialty:</strong>
+                    <p className="mt-1">{rootSpecialtyName}</p>
                 </div>
-            </>
-        );
-    };
+            )}
+
+            {suggestion.suggestedBy && (
+                <div>
+                    <strong>Suggested By:</strong>
+                    <p className="mt-1">
+                        {suggestion.suggestedBy.firstName} {suggestion.suggestedBy.lastName}
+                        {suggestion.suggestedBy.email && (
+                            <span className="text-sm opacity-70 block">{suggestion.suggestedBy.email}</span>
+                        )}
+                    </p>
+                </div>
+            )}
+
+            {suggestion.createdAt && (
+                <div>
+                    <strong>Submitted:</strong>
+                    <p className="mt-1">
+                        {new Date(suggestion.createdAt).toLocaleDateString()} at{" "}
+                        {new Date(suggestion.createdAt).toLocaleTimeString()}
+                    </p>
+                </div>
+            )}
+        </div>
+    );
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
@@ -132,30 +140,13 @@ const ViewPendingSuggestionPopup = ({ suggestion, onClose, onSuggestionApproved 
                 <div className="flex gap-2 mt-6">
                     {!success ? (
                         <>
-                            <button
-                                className="btn btn-success flex-1"
-                                onClick={handleApprove}
-                                disabled={loading}
-                            >
-                                {loading ? (
-                                    <span className="loading loading-spinner loading-sm"></span>
-                                ) : (
-                                    "Approve"
-                                )}
+                            <button className="btn btn-success flex-1" onClick={handleApprove} disabled={loading}>
+                                {loading ? <span className="loading loading-spinner loading-sm"></span> : "Approve"}
                             </button>
-                            <button
-                                className="btn btn-outline flex-1"
-                                onClick={onClose}
-                                disabled={loading}
-                            >
-                                Close
-                            </button>
+                            <button className="btn btn-outline flex-1" onClick={onClose} disabled={loading}>Close</button>
                         </>
                     ) : (
-                        <button
-                            className="btn btn-success flex-1"
-                            disabled
-                        >
+                        <button className="btn btn-success flex-1" disabled>
                             <span className="loading loading-spinner loading-sm"></span>
                             Closing...
                         </button>

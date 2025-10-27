@@ -100,23 +100,29 @@ const HomePageAdmin = () => {
     const fetchPendingReports = async () => {
         try {
             setLoading(prev => ({ ...prev, reports: true }));
+
             const API_URL = import.meta.env.VITE_API_URL || "";
             const res = await axios.get(`${API_URL}/api/admin/complaints`, {
                 withCredentials: true,
             });
+
             console.log("Fetched pending reports:", res.data);
+
             if (res.data.success && Array.isArray(res.data.complaints)) {
                 setPendingReports(res.data.complaints);
             } else {
+                // Ensure state is always an array
                 setPendingReports([]);
             }
         } catch (err) {
             console.error("Error fetching pending reports:", err);
+            // Fallback to empty array on error
             setPendingReports([]);
         } finally {
             setLoading(prev => ({ ...prev, reports: false }));
         }
     };
+
 
     // Call it in useEffect
     useEffect(() => {

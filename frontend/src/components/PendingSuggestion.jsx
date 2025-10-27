@@ -1,9 +1,33 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 
 const PendingSuggestion = ({ suggestion, onSuggestionApproved, onViewDetails }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [rootSpecialtyName, setRootSpecialtyName] = useState("");
+
+    useEffect(() => {
+        const fetchRootSpecialtyName = async () => {
+            // Only fetch if type is subspecialty
+            if (suggestion.type === "subspecialty" && suggestion._id) {
+                try {
+                    const API_URL = import.meta.env.VITE_API_URL || "";
+                    const res = await axios.get(
+                        `${API_URL}/api/specialties-and-services/subspecialty-root/${suggestion._id}`,
+                        { withCredentials: true }
+                    );
+
+                    // Set name if available
+                    setRootSpecialtyName(res.data.name || "Unknown");
+                } catch (err) {
+                    console.error("Failed to fetch root specialty:", err);
+                    setRootSpecialtyName("Unknown");
+                }
+            }
+        };
+
+        fetchRootSpecialtyName();
+    }, [suggestion]);
 
     const handleApprove = async () => {
         try {
@@ -17,10 +41,8 @@ const PendingSuggestion = ({ suggestion, onSuggestionApproved, onViewDetails }) 
                 { withCredentials: true }
             );
 
-            if (res.data.message) {
-                if (onSuggestionApproved) {
-                    onSuggestionApproved(suggestion._id);
-                }
+            if (res.data.message && onSuggestionApproved) {
+                onSuggestionApproved(suggestion._id);
             }
         } catch (err) {
             console.error("Error approving suggestion:", err);
@@ -32,14 +54,10 @@ const PendingSuggestion = ({ suggestion, onSuggestionApproved, onViewDetails }) 
 
     const getSuggestionType = () => {
         switch (suggestion.type) {
-            case "specialty":
-                return "Medical Specialty";
-            case "subspecialty":
-                return "Subspecialty";
-            case "service":
-                return "Service";
-            default:
-                return suggestion.type;
+            case "specialty": return "Medical Specialty";
+            case "subspecialty": return "Subspecialty";
+            case "service": return "Service";
+            default: return suggestion.type;
         }
     };
 
@@ -51,10 +69,8 @@ const PendingSuggestion = ({ suggestion, onSuggestionApproved, onViewDetails }) 
                         <h3 className="font-semibold text-lg">{suggestion.name}</h3>
                         <div className="flex flex-wrap gap-2 mt-2">
                             <span className="badge badge-primary">{getSuggestionType()}</span>
-                            {suggestion.type === "subspecialty" && suggestion.rootSpecialty && (
-                                <span className="badge badge-outline">
-                                    Under: {suggestion.rootSpecialty.name || suggestion.rootSpecialty}
-                                </span>
+                            {suggestion.type === "subspecialty" && rootSpecialtyName && (
+                                <span className="badge badge-outline">Under: {rootSpecialtyName}</span>
                             )}
                         </div>
                         {suggestion.suggestedBy && (
@@ -70,6 +86,13 @@ const PendingSuggestion = ({ suggestion, onSuggestionApproved, onViewDetails }) 
                             onClick={() => onViewDetails(suggestion)}
                         >
                             View
+                        </button>
+                        <button
+                            className="btn btn-success btn-sm mt-1"
+                            onClick={handleApprove}
+                            disabled={loading}
+                        >
+                            {loading ? "Approving..." : "Approve"}
                         </button>
                     </div>
                 </div>
