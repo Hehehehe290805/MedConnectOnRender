@@ -1,5 +1,5 @@
 import Schedule from "../models/Schedule.js";
-import Appointment_Service from "../models/Appointment.js";
+import Appointment from "../models/Appointment.js";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
@@ -12,7 +12,7 @@ const toPhTime = (date) => dayjs(date).tz("Asia/Manila");
 const nowPhTime = () => dayjs().tz("Asia/Manila");
 
 // 📅 Generate available slots in PH time
-async function generateAvailableSlots(doctorId, daysAhead = 5) {
+async function generateAvailableSlots(doctorId, daysAhead = 2) {
     if (!doctorId) return [];
 
     const availability = await Schedule.findOne({ doctorId });
@@ -49,7 +49,7 @@ async function generateAvailableSlots(doctorId, daysAhead = 5) {
             const slotStart = currentTime.toDate();
             const slotEnd = currentTime.add(slotDuration, "minute").toDate();
 
-            const overlapping = await Appointment_Service.findOne({
+            const overlapping = await Appointment.findOne({
                 doctorId,
                 status: {
                     $in: [
@@ -97,7 +97,7 @@ export async function getDoctorCalendar(req, res) {
         if (!doctorId) return res.status(400).json({ message: "doctorId is required" });
 
         const slots = await generateAvailableSlots(doctorId, Number(daysAhead));
-        const appointments = await Appointment_Service.find({
+        const appointments = await Appointment.find({
             doctorId,
             status: {
                 $in: [
@@ -163,7 +163,7 @@ export async function getDoctorPublicCalendar(req, res) {
         if (!doctorId) return res.status(400).json({ message: "doctorId is required" });
 
         const slots = await generateAvailableSlots(doctorId, Number(daysAhead));
-        const appointments = await Appointment_Service.find({
+        const appointments = await Appointment.find({
             doctorId,
             status: { $in: ["booked", "confirmed", "cancelled", "completed"] },
             start: { $gte: new Date() },
@@ -210,7 +210,7 @@ export async function getInstitutePublicCalendar(req, res) {
         const { instituteId } = req.query;
         if (!instituteId) return res.status(400).json({ message: "instituteId is required" });
 
-        const appointments = await Appointment_Service.find({
+        const appointments = await Appointment.find({
             instituteId,
             status: {
                 $in: [
@@ -261,7 +261,7 @@ export async function getInstitutePublicCalendar(req, res) {
     
 export async function setAvailability(req, res) {
     try {
-        const providerId = req.user.id; // Logged in user
+        const providerId = req.user._id; // Logged in user
         const providerType = req.user.role; // Assuming role is either "doctor" or "institute"
         const { startHour, endHour, daysOfWeek, isActive } = req.body;
 
@@ -301,13 +301,47 @@ export async function setAvailability(req, res) {
         res.status(500).json({ message: "Internal server error" });
     }
 }
+export async function getAvailability(req, res) {
+    try {
+        const providerId = req.user._id; // Logged in user
+        const providerType = req.user.role; // Assuming role is either "doctor" or "institute"
+
+        if (!["doctor", "institute"].includes(providerType)) {
+            return res.status(400).json({ message: "Invalid provider type" });
+        }
+
+        const query = providerType === "doctor"
+            ? { doctorId: providerId }
+            : { instituteId: providerId };
+
+        const availability = await Schedule.findOne(query);
+
+        if (!availability) {
+            return res.status(200).json({
+                success: true,
+                message: "No availability schedule found",
+                availability: null
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Availability retrieved successfully",
+            availability
+        });
+
+    } catch (error) {
+        console.error("Error getting availability:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
 
 export const acceptAppointment = async (req, res) => {
     try {
         const doctorId = req.user._id;
         const { appointmentId } = req.body;
 
-        const appointment = await Appointment_Service.findById(appointmentId);
+        const appointment = await Appointment.findById(appointmentId);
         if (!appointment) return res.status(404).json({ message: "Appointment not found" });
 
         if (appointment.doctorId.toString() !== doctorId.toString())
@@ -331,7 +365,7 @@ export const rejectAppointment = async (req, res) => {
         const doctorId = req.user._id;
         const { appointmentId, reason } = req.body;
 
-        const appointment = await Appointment_Service.findById(appointmentId);
+        const appointment = await Appointment.findById(appointmentId);
         if (!appointment) return res.status(404).json({ message: "Appointment not found" });
 
         if (appointment.doctorId.toString() !== doctorId.toString())
@@ -357,7 +391,7 @@ export const confirmDeposit = async (req, res) => {
         const doctorId = req.user._id;
         const { appointmentId } = req.body;
 
-        const appointment = await Appointment_Service.findById(appointmentId);
+        const appointment = await Appointment.findById(appointmentId);
         if (!appointment) return res.status(404).json({ message: "Appointment not found" });
 
         if (appointment.doctorId.toString() !== doctorId.toString())
@@ -382,7 +416,7 @@ export const markComplete = async (req, res) => {
         const doctorId = req.user._id;
         const { appointmentId } = req.body;
 
-        const appointment = await Appointment_Service.findById(appointmentId);
+        const appointment = await Appointment.findById(appointmentId);
         if (!appointment) return res.status(404).json({ message: "Appointment not found" });
 
         if (appointment.doctorId.toString() !== doctorId.toString())
@@ -407,7 +441,7 @@ export const confirmFullPayment = async (req, res) => {
         const doctorId = req.user._id;
         const { appointmentId } = req.body;
 
-        const appointment = await Appointment_Service.findById(appointmentId);
+        const appointment = await Appointment.findById(appointmentId);
         if (!appointment) return res.status(404).json({ message: "Appointment not found" });
 
         if (appointment.doctorId.toString() !== doctorId.toString())

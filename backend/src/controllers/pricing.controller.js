@@ -29,10 +29,10 @@ export async function setOrUpdatePricing(req, res) {
 
         if (user.role === "doctor") {
             // 🚫 DOCTORS: IGNORE any serviceId they pass and force Consultation service
-            const consultationService = await Service.findOne({ name: "Consultation" });
+            const consultationService = await Service.findOne({ name: "Appointment" });
             if (!consultationService) {
                 return res.status(500).json({
-                    message: "Consultation service not found in system"
+                    message: "Appointment service not found in system"
                 });
             }
             targetServiceId = consultationService._id;

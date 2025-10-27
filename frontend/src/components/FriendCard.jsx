@@ -1,6 +1,10 @@
-import { Link } from "react-router";
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import CreateBookingPopup from "../pages/CreateBookingPopup";
 
 const FriendCard = ({ friend }) => {
+  const [showBookingPopup, setShowBookingPopup] = useState(false);
+
   // Render based on user role
   const renderUserInfo = () => {
     switch (friend.role) {
@@ -137,6 +141,12 @@ const FriendCard = ({ friend }) => {
     }
   };
 
+  const handleBookingCreated = (appointment) => {
+    console.log("Appointment created:", appointment);
+    // You can add any post-booking logic here
+    // Like showing a success message, updating state, or redirecting
+  };
+
   return (
     <div className="card bg-base-200 hover:shadow-md transition-shadow h-full">
       <div className="card-body p-4 flex flex-col">
@@ -144,10 +154,31 @@ const FriendCard = ({ friend }) => {
           {renderUserInfo()}
         </div>
 
-        <Link to={`/chat/${friend._id}`} className="btn btn-outline w-full mt-auto">
-          Message
-        </Link>
+        <div className="flex flex-col gap-2 mt-auto">
+          {/* Show Book Now button only for doctors and institutes */}
+          {(friend.role === "doctor" || friend.role === "institute") && (
+            <button
+              onClick={() => setShowBookingPopup(true)}
+              className="btn btn-primary w-full"
+            >
+              Book Now
+            </button>
+          )}
+
+          <Link to={`/chat/${friend._id}`} className="btn btn-outline w-full">
+            Message
+          </Link>
+        </div>
       </div>
+
+      {/* Booking Popup */}
+      {showBookingPopup && (
+        <CreateBookingPopup
+          provider={friend}
+          onClose={() => setShowBookingPopup(false)}
+          onBookingCreated={handleBookingCreated}
+        />
+      )}
     </div>
   );
 };

@@ -15,13 +15,13 @@ router.post("/cancel", protectRoute, cancelAppointment); //
 router.get("/user-appointments", protectRoute, getUserAppointments);
 
 // During Appointment
-router.post("/attend", protectRoute, markAttendance); // 
+router.post("/attend/:id", protectRoute, markAttendance); // 
 router.get("/check-attendance", protectRoute, checkNoShows); // 
 router.post("/complete-appointment", protectRoute, completeAppointment);
 
 // After Appointment
 router.post("/pay-remaining", protectRoute, payRemaining); //
 router.post("/submit-review", protectRoute, submitReview); //
-router.post("/report", protectRoute, fileComplaint); // 
+router.post("/report/:id", protectRoute, fileComplaint); // 
 
 export default router;  

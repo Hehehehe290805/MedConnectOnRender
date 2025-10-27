@@ -5,7 +5,7 @@ const AppointmentSchema = new mongoose.Schema({
   doctorId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   instituteId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   patientId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  serviceId: { type: mongoose.Schema.Types.ObjectId, ref: "Service" }, // optional for labs/institutes
+  serviceId: { type: mongoose.Schema.Types.ObjectId, ref: "Service" }, 
   virtual: { type: Boolean, default: true }, 
 
   // Schedule
@@ -32,7 +32,7 @@ const AppointmentSchema = new mongoose.Schema({
       "no_show_patient",
       "no_show_doctor",
       "no_show_both",
-      "freeze"
+      "freeze",
     ],
     default: "pending_accept",
   },
@@ -63,5 +63,5 @@ const AppointmentSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
-const Appointment = mongoose.model("Appointment_Service", AppointmentSchema);
+const Appointment = mongoose.model("Appointment", AppointmentSchema);
 export default Appointment;

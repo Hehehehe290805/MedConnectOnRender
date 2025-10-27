@@ -1,6 +1,6 @@
 import express from "express";
 import {
-    setAvailability,
+    setAvailability, getAvailability,
     getDoctorCalendar, getDoctorPublicCalendar, getInstitutePublicCalendar,
     acceptAppointment, rejectAppointment, markComplete,
     confirmDeposit, confirmFullPayment
@@ -11,6 +11,7 @@ const router = express.Router();
 
 // Set or update doctor availability
 router.post("/availability", protectRoute, setAvailability);
+router.get("/get-availability", protectRoute, getAvailability);
 
 // Get full calendar (available + booked)
 router.get("/doctor-calendar", protectRoute, getDoctorCalendar);

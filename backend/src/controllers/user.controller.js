@@ -187,28 +187,6 @@ export async function getUsers(req, res) {
   }
 }
 
-// export async function getDoctors(req, res) {
-//   try {
-//     const doctors = await User.find({
-//       status: "onBoarded",
-//       role: "doctor",
-//     }).select("firstName lastName profession birthDate");
-
-//     const formatted = doctors.map(user => ({
-//       _id: user._id,
-//       firstName: user.firstName,
-//       lastName: user.lastName,
-//       profession: user.profession,
-//       birthDate: user.birthDate ? user.birthDate.toISOString().split("T")[0] : null,
-//     }));
-
-//     res.status(200).json({ success: true, users: formatted });
-//   } catch (error) {
-//     console.error("Error fetching doctors:", error);
-//     res.status(500).json({ message: "Internal Server Error" });
-//   }
-// }
-
 export async function getDoctors(req, res) {
   try {
     const doctors = await User.find({
@@ -246,28 +224,6 @@ export async function getPharmacies(req, res) {
     res.status(500).json({ message: "Internal Server Error" });
   }
 }
-// export async function getInstitutes(req, res) {
-//   try {
-//     const institutes = await User.find({
-//       status: "onBoarded",
-//       role: "institute",
-//     }).select("firstName lastName profession birthDate facilityName");
-
-//     const formatted = institutes.map(user => ({
-//       _id: user._id,
-//       firstName: user.firstName,
-//       lastName: user.lastName,
-//       profession: user.profession,
-//       birthDate: user.birthDate ? user.birthDate.toISOString().split("T")[0] : null,
-//       facilityName: user.facilityName,
-//     }));
-
-//     res.status(200).json({ success: true, users: formatted });
-//   } catch (error) {
-//     console.error("Error fetching institutes:", error);
-//     res.status(500).json({ message: "Internal Server Error" });
-//   }
-// }
 
 export async function getInstitutes(req, res) {
   try {

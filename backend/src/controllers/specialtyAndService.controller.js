@@ -336,3 +336,63 @@ export async function claim(req, res) {
         res.status(500).json({ message: "Internal Server Error" });
     }
 }
+
+export async function autoClaimAppointmentService(req, res) {
+    try {
+        const userId = req.user._id;
+
+        const user = await User.findById(userId).select("role status approvedBy");
+        if (!user) return res.status(404).json({ message: "User not found" });
+        if (user.role !== "doctor") return res.status(403).json({ message: "Only doctors can auto-claim appointment service" });
+        if (user.status !== "onBoarded") return res.status(403).json({ message: "Your account must be onBoarded to claim services" });
+
+        let appointmentService = await Service.findOne({ name: "Appointment" });
+        if (!appointmentService) {
+            appointmentService = await Service.create({
+                name: "Appointment",
+                description: "Medical consultation appointment",
+                status: "verified",
+                category: "consultation",
+                durationMinutes: 30
+            });
+        }
+
+        const existingClaim = await Institute_Service.findOne({
+            doctorId: userId,
+            serviceId: appointmentService._id
+        });
+
+        if (existingClaim) {
+            return res.status(200).json({
+                success: true,
+                message: "Appointment service already claimed",
+                claim: existingClaim,
+                service: appointmentService
+            });
+        }
+
+        console.log("Creating auto-claim for doctor:", userId, "service:", appointmentService._id);
+
+        const autoClaim = await Institute_Service.create({
+            doctorId: userId,
+            serviceId: appointmentService._id,
+            status: "verified",
+            approvedBy: user.approvedBy || null,
+            claimType: "service",
+            durationMinutes: 30
+        });
+
+        console.log("Created:", autoClaim);
+
+        res.status(201).json({
+            success: true,
+            message: "Appointment service automatically claimed and verified",
+            claim: autoClaim,
+            service: appointmentService
+        });
+
+    } catch (error) {
+        console.error("Error auto-claiming appointment service:", error.message, error);
+        res.status(500).json({ message: error.message });
+    }
+}

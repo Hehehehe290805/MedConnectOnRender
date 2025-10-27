@@ -5,7 +5,10 @@ const Institute_ServiceSchema = new mongoose.Schema(
         instituteId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
-            required: true,
+        },
+        doctorId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
         },
         serviceId: {
             type: mongoose.Schema.Types.ObjectId,
