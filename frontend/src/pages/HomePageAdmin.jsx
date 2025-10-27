@@ -243,17 +243,32 @@ const HomePageAdmin = () => {
                     <p>No pending reports.</p>
                 ) : (
                     <div className="flex flex-col space-y-2">
-                        {pendingReports.map((report) => (
-                            <PendingReport
-                                key={report._id}
-                                report={report}
-                                onViewDetails={openReportModal}
-                                onReportResolved={handleReportResolved}
-                            />
-                        ))}
+                        {pendingReports.map((report) => {
+                            // Safely handle populated or non-populated fields
+                            const filedByName = report.filedBy
+                                ? `${report.filedBy.firstName} ${report.filedBy.lastName}`
+                                : "Unknown";
+                            const filedAgainstName = report.filedAgainst
+                                ? `${report.filedAgainst.firstName} ${report.filedAgainst.lastName}`
+                                : "Unknown";
+
+                            return (
+                                <PendingReport
+                                    key={report._id}
+                                    report={{
+                                        ...report,
+                                        filedByName,
+                                        filedAgainstName,
+                                    }}
+                                    onViewDetails={openReportModal}
+                                    onReportResolved={handleReportResolved}
+                                />
+                            );
+                        })}
                     </div>
                 )}
             </section>
+
 
             {/* Modals */}
             {selectedPendingUser && (
