@@ -64,6 +64,23 @@ const ViewPendingAppointmentPatientPopup = ({ appointment, onClose }) => {
     return Math.round((end - start) / (1000 * 60));
   };
 
+  const handleAttend = async () => {
+    try {
+      setLoading(true);
+      const API_URL = import.meta.env.VITE_API_URL || "";
+      const res = await axios.post(
+        `${API_URL}/api/booking/attend/${appointment._id}`,
+        {},
+        { withCredentials: true }
+      );
+      console.log("Attendance/Completion marked:", res.data.message);
+      onAppointmentUpdated(res.data.appointment);
+    } catch (err) {
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handlePayDeposit = async () => {
     if (!gcashRef.trim()) {
       toast.error("Please enter your GCash reference number"); // ✅ TOAST
@@ -103,7 +120,7 @@ const ViewPendingAppointmentPatientPopup = ({ appointment, onClose }) => {
     try {
       setLoading(true);
       const res = await axios.post(
-        `${API_URL}/api/booking/pay-balance`,
+        `${API_URL}/api/booking/pay-remaining`,
         {
           appointmentId: appointment._id,
           referenceNumber: balanceRef,
@@ -124,6 +141,28 @@ const ViewPendingAppointmentPatientPopup = ({ appointment, onClose }) => {
     }
   };
 
+  const handleComplete = async () => {
+    try {
+      setLoading(true);
+      const API_URL = import.meta.env.VITE_API_URL || "";
+      const res = await axios.post(
+        `${API_URL}/api/booking/complete-appointment`,
+        { appointmentId: appointment._id },
+        { withCredentials: true }
+      );
+      console.log("Appointment completed:", res.data.message);
+
+      // Update parent state or refresh data
+      if (onAppointmentUpdated) {
+        onAppointmentUpdated(res.data.appointment);
+      }
+    } catch (err) {
+      
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmitReview = async () => {
     if (!rating) {
       toast.error("Please select a rating"); // ✅ TOAST
@@ -133,7 +172,7 @@ const ViewPendingAppointmentPatientPopup = ({ appointment, onClose }) => {
     try {
       setLoading(true);
       const res = await axios.post(
-        `${API_URL}/api/booking/review`,
+        `${API_URL}/api/booking/submit-review`,
         {
           appointmentId: appointment._id,
           rating,
@@ -192,9 +231,50 @@ const ViewPendingAppointmentPatientPopup = ({ appointment, onClose }) => {
 
       case "confirmed":
         return (
+          <div className="alert alert-success">
+            <span>Appointment confirmed! Waiting for appointment time...</span>
+          </div>
+        );
+
+      case "ongoing":
+        return (
           <>
             <div className="alert alert-info mb-4">
-              <span>Scan the QRCode and provide the reference number for balance payment</span>
+              <span>Appointment is ongoing. Mark as complete when finished.</span>
+            </div>
+            <div className="flex gap-2">
+              <button
+                className="btn btn-primary flex-1"
+                onClick={handleAttend}
+                disabled={loading}
+              >
+                {loading ? "Processing..." : "Mark Attendance"}
+              </button>
+            </div>
+          </>
+        );
+
+      case "marked_complete":
+        return (
+          <>
+            <div className="alert alert-info mb-4">
+              <span>Appointment is ongoing. Mark as complete when finished.</span>
+            </div>
+            <button
+              className="btn btn-primary btn-block"
+              onClick={handleComplete}
+              disabled={loading}
+            >
+              {loading ? "Processing..." : "Mark as Complete"}
+            </button>
+          </>
+        );
+
+      case "completed":
+        return (
+          <>
+            <div className="alert alert-info mb-4">
+              <span>Please pay your remaining balance to fully complete this appointment.</span>
             </div>
 
             {qrUrl && (
@@ -203,31 +283,27 @@ const ViewPendingAppointmentPatientPopup = ({ appointment, onClose }) => {
               </div>
             )}
 
-            <div className="form-control mb-4">
-              <label className="label">
-                <span className="label-text">Please enter the reference number from your balance payment</span>
-              </label>
-              <input
-                type="text"
-                placeholder="Enter GCash Reference Number"
-                className="input input-bordered w-full"
-                value={balanceRef}
-                onChange={handleBalanceRefChange}
-                disabled={loading}
-              />
-            </div>
+            <input
+              type="text"
+              placeholder="Enter GCash Reference Number for balance"
+              className="input input-bordered w-full mb-4"
+              value={balanceRef}
+              onChange={handleBalanceRefChange}
+              disabled={loading}
+            />
 
             <button
               className="btn btn-primary btn-block"
               onClick={handlePayBalance}
               disabled={loading || !balanceRef.trim()}
             >
-              {loading ? "Processing..." : "Submit Balance Payment"}
+              {loading ? "Processing..." : "Pay Balance"}
             </button>
           </>
         );
 
-      case "completed":
+
+      case "confirm_fully_paid":
         return (
           <>
             <div className="alert alert-success mb-4">
