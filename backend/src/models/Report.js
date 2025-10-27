@@ -4,7 +4,7 @@ const ReportSchema = new mongoose.Schema(
     {
         appointmentId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "Appointment_Service",
+            ref: "Appointment",
             required: true,
         },
         filedBy: {

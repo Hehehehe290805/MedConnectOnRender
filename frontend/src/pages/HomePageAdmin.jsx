@@ -3,6 +3,7 @@ import PendingUser from "../components/PendingUser.jsx";
 import PendingSuggestion from "../components/PendingSuggestion.jsx";
 import PendingClaim from "../components/PendingClaim.jsx";
 import PendingReport from "../components/PendingReport.jsx";
+
 import ViewPendingUserPopup from "./ViewPendingUserPopup.jsx";
 import ViewPendingSuggestionPopup from "./ViewPendingSuggestionPopup.jsx";
 import ViewPendingClaimPopup from "./ViewPendingClaimPopup.jsx";
@@ -14,10 +15,12 @@ const HomePageAdmin = () => {
     const [pendingSuggestions, setPendingSuggestions] = useState([]);
     const [pendingClaims, setPendingClaims] = useState([]);
     const [pendingReports, setPendingReports] = useState([]);
+
     const [selectedPendingUser, setSelectedPendingUser] = useState(null);
     const [selectedPendingSuggestion, setSelectedPendingSuggestion] = useState(null);
     const [selectedPendingClaim, setSelectedPendingClaim] = useState(null);
     const [selectedPendingReport, setSelectedPendingReport] = useState(null);
+
     const [loading, setLoading] = useState({
         users: false,
         suggestions: false,
@@ -103,18 +106,25 @@ const HomePageAdmin = () => {
             });
             console.log("Fetched pending reports:", res.data);
             if (res.data.success && Array.isArray(res.data.complaints)) {
-                // Filter only pending reports
-                const pending = res.data.complaints.filter(report => report.status === "pending");
-                setPendingReports(pending);
+                setPendingReports(res.data.complaints);
             } else {
                 setPendingReports([]);
             }
         } catch (err) {
             console.error("Error fetching pending reports:", err);
+            setPendingReports([]);
         } finally {
             setLoading(prev => ({ ...prev, reports: false }));
         }
     };
+
+    // Call it in useEffect
+    useEffect(() => {
+        fetchPendingUsers();
+        fetchPendingSuggestions();
+        fetchPendingClaims();
+        fetchPendingReports(); // Add this
+    }, []);
 
     // Approval handlers
     const handleUserApproved = (approvedUserId) => {
@@ -271,6 +281,7 @@ const HomePageAdmin = () => {
                     onReportResolved={handleReportResolved}
                 />
             )}
+
         </div>
     );
 };

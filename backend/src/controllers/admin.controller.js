@@ -300,10 +300,19 @@ export async function approveClaim(req, res) {
 export const viewAllComplaints = async (req, res) => {
   try {
     const complaints = await Report.find()
-      .sort({ createdAt: 1 }) // earliest first
-      .populate("appointmentId", "doctorId patientId start end status")
-      .populate("filedBy", "name email")
-      .populate("filedAgainst", "name email");
+      .sort({ createdAt: 1 })
+      .populate({
+        path: "appointmentId",
+        select: "doctorId patientId start end status"
+      })
+      .populate({
+        path: "filedBy",
+        select: "firstName lastName email" // Adjust based on your User model
+      })
+      .populate({
+        path: "filedAgainst",
+        select: "firstName lastName email" // Adjust based on your User model
+      });
 
     res.status(200).json({ success: true, complaints });
   } catch (err) {
