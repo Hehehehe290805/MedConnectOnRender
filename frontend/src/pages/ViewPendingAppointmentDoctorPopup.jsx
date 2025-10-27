@@ -144,6 +144,24 @@ const ViewPendingAppointmentDoctorPopup = ({ appointment, onClose, onAppointment
     }
   };
 
+  const handleAttend = async () => {
+    try {
+      setLoading(true);
+      const API_URL = import.meta.env.VITE_API_URL || "";
+      const res = await axios.post(
+        `${API_URL}/api/booking/attend/${appointment._id}`,
+        {},
+        { withCredentials: true }
+      );
+      console.log("Attendance/Completion marked:", res.data.message);
+      onAppointmentUpdated(res.data.appointment);
+    } catch (err) {
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
   // ✅ MARK COMPLETE HANDLER
   const handleMarkComplete = async () => {
     try {
@@ -177,14 +195,14 @@ const ViewPendingAppointmentDoctorPopup = ({ appointment, onClose, onAppointment
       setError(null);
 
       const res = await axios.post(
-        `${API_URL}/api/doctor-schedule/confirm-balance`,
+        `${API_URL}/api/doctor-schedule/confirm-full-payment`,
         { appointmentId: appointment._id },
         { withCredentials: true }
       );
 
       if (res.data.success) {
         toast.success("Balance payment confirmed successfully");
-        onAppointmentUpdated(appointment._id, "completed");
+        onAppointmentUpdated(appointment._id, "confirm_fully_paid");
         setTimeout(() => onClose(), 1500);
       }
     } catch (err) {
@@ -254,15 +272,26 @@ const ViewPendingAppointmentDoctorPopup = ({ appointment, onClose, onAppointment
             <div className="alert alert-info mb-4">
               <span>Appointment is ongoing. Mark as complete when finished.</span>
             </div>
-            <button
-              className="btn btn-primary btn-block"
-              onClick={handleMarkComplete}
-              disabled={loading}
-            >
-              {loading ? "Processing..." : "Mark as Complete"}
-            </button>
+            <div className="flex gap-2">
+              <button
+                className="btn btn-primary flex-1"
+                onClick={handleAttend}
+                disabled={loading}
+              >
+                {loading ? "Processing..." : "Mark Attendance"}
+              </button>
+              <button
+                className="btn btn-primary flex-1"
+                onClick={handleMarkComplete}
+                disabled={loading}
+              >
+                {loading ? "Processing..." : "Mark as Complete"}
+              </button>
+            </div>
           </>
         );
+
+
 
       case "marked_complete":
         return (
@@ -282,7 +311,7 @@ const ViewPendingAppointmentDoctorPopup = ({ appointment, onClose, onAppointment
               onClick={handleConfirmBalance}
               disabled={loading}
             >
-              {loading ? "Confirming..." : "Confirm Balance Payment"}
+              {loading ? "Confirming..." : "Confirm   Balance Payment"}
             </button>
           </>
         );
@@ -290,7 +319,7 @@ const ViewPendingAppointmentDoctorPopup = ({ appointment, onClose, onAppointment
       case "completed":
         return (
           <div className="alert alert-success">
-            <span>✅ Appointment completed!</span>
+            <span>Appointment completed! Awaiting Payment.</span>
           </div>
         );
 

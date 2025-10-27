@@ -472,86 +472,6 @@ export const getUserAppointments = async (req, res) => {
   }
 };
 
-
-// export const getUserAppointments = async (req, res) => {
-//     try {
-//         const userId = req.user._id;
-
-//         const query = {
-//             $or: [{ doctorId: userId }, { patientId: userId }],
-//             status: {
-//                 $in: [
-//                     "pending_accept",
-//                     "awaiting_deposit",
-//                     "booked",
-//                     "confirmed",
-//                     "ongoing",
-//                     "marked_complete",
-//                     "completed",
-//                     "fully_paid",
-//                     "confirm_fully_paid",
-//                     "cancelled_unpaid",
-//                     "cancelled",
-//                     "rejected",
-//                     "no_show_patient",
-//                     "no_show_doctor",
-//                     "no_show_both",
-//                     "freeze"
-//                 ]
-//             }
-//         };
-
-//         const appointments = await Appointment.find(query)
-//             .populate('doctorId', 'name email profilePicture')
-//             .populate('patientId', 'name email profilePicture')
-//             .populate('serviceId', 'name price duration')
-//             .sort({ start: 1 });
-
-//         const formatted = appointments.map((appointment) => ({
-//             _id: appointment._id,
-//             doctorId: appointment.doctorId,
-//             patientId: appointment.patientId,
-//             serviceId: appointment.serviceId,
-//             instituteId: appointment.instituteId,
-//             status: appointment.status,
-//             start: appointment.start,
-//             end: appointment.end,
-//             amount: appointment.amount,
-//             paymentDeposit: appointment.paymentDeposit,
-//             depositPaid: appointment.depositPaid,
-//             depositRef: appointment.depositRef,
-//             balanceAmount: appointment.balanceAmount,
-//             balancePaid: appointment.balancePaid,
-//             balanceRef: appointment.balanceRef,
-//             virtual: appointment.virtual,
-//             patientPresent: appointment.patientPresent,
-//             doctorPresent: appointment.doctorPresent,
-//             institutePresent: appointment.institutePresent,
-//             bothPresent: appointment.bothPresent,
-//             rejectionReason: appointment.rejectionReason,
-//             rating: appointment.rating,
-//             review: appointment.review,
-//             role: String(appointment.doctorId._id) === String(userId)
-//                 ? "doctor"
-//                 : String(appointment.patientId._id) === String(userId)
-//                     ? "patient"
-//                     : "unknown"
-//         }));
-
-//         res.status(200).json({
-//             success: true,
-//             appointments: formatted,
-//             timezone: "Asia/Manila (UTC+8)"
-//         });
-//     } catch (err) {
-//         console.error("Error fetching appointments:", err);
-//         res.status(500).json({
-//             success: false,
-//             message: "Server error fetching appointments"
-//         });
-//     }
-// };
-
 export const markAttendance = async (req, res) => {
     try {
         const appointmentId = req.params.id;
@@ -626,36 +546,6 @@ export const checkNoShows = async () => {
         console.error("Error checking no-shows:", err);
     }
 };
-
-// export const checkStartedAppointments = async () => {
-//     const now = new Date();
-
-//     try {
-//         // Find appointments that are confirmed and have start time <= current time
-//         const appointments = await Appointment.find({
-//             start: { $lte: now },
-//             status: "confirmed"
-//         });
-
-//         if (appointments.length > 0) {
-//             console.log(`[CRON] Found ${appointments.length} appointments to mark as ongoing`);
-//         }
-
-//         for (const appointment of appointments) {
-//             try {
-//                 appointment.status = "ongoing";
-//                 await appointment.save();
-//                 console.log(`[CRON] Marked appointment ${appointment._id} as ongoing`);
-//             } catch (err) {
-//                 console.error(`[CRON] Error updating appointment ${appointment._id}:`, err);
-//             }
-//         }
-
-//     } catch (err) {
-//         console.error("Error checking started appointments:", err);
-//         throw err;
-//     }
-// };
 
 export const checkStartedAppointments = async () => {
   const now = new Date();
